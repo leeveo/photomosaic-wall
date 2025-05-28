@@ -14,6 +14,13 @@ type MosaicTile = {
   col: number
 }
 
+// Add a type for the database tile
+type DbTile = {
+  image_url: string
+  row: number
+  col: number
+}
+
 export default function MosaicDisplayPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -64,7 +71,7 @@ export default function MosaicDisplayPage() {
 
       const updateTiles = async () => {
         const loadedTiles = await loadTiles(slug)
-        const formatted = loadedTiles.map((tile: any) => ({
+        const formatted = loadedTiles.map((tile: DbTile) => ({
           src: tile.image_url,
           row: tile.row,
           col: tile.col,
@@ -83,7 +90,7 @@ export default function MosaicDisplayPage() {
     fetchData()
 
     return () => clearInterval(interval)
-  }, [slug])
+  }, [slug, router, store])
 
   // Gestion du fullscreen
   const toggleFullscreen = () => {

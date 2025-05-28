@@ -76,7 +76,7 @@ export default function MosaicCanvas({ tiles }: Props) {
             await new Promise((res) => setTimeout(res, 30)) // Pause pour l'effet
           }
           ctx.globalAlpha = 1.0 // Réinitialiser l'opacité
-        } catch (err) {
+        } catch {
           // Image échouée → remplissage gris
           ctx.fillStyle = '#ccc'
           ctx.fillRect(x, y, cellSize, cellSize)

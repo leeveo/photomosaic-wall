@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { FiCalendar } from 'react-icons/fi'
 import { FaUserCircle } from 'react-icons/fa'
 import { useQRCode } from 'next-qrcode'
+import Image from 'next/image'
 
 type Props = {
   id: string
@@ -43,14 +44,14 @@ export default function ProjectCard({
 
   useEffect(() => {
     const loadImage = async () => {
-      const { data, error } = await supabase
+      const { data: projectSetup } = await supabase
         .from('setups')
-        .select('image')
+        .select('*')
         .eq('project_slug', slug)
-        .single()
+        .maybeSingle()
 
-      if (data?.image) {
-        setSetupImage(data.image)
+      if (projectSetup?.image) {
+        setSetupImage(projectSetup.image)
       }
     }
 
@@ -97,9 +98,11 @@ export default function ProjectCard({
             <span>Créé le {createdAt}</span>
           </div>
           {setupImage && (
-            <img
+            <Image
               src={setupImage}
               alt="setup"
+              width={50}
+              height={50}
               className="w-[50px] h-auto rounded shadow-sm border border-gray-200"
             />
           )}
@@ -123,7 +126,7 @@ export default function ProjectCard({
           <div className="flex items-center gap-2">
             <FiCalendar className="text-xl text-emerald-600" />
             <div>
-              <p className="text-xs text-gray-500">Date de l'événement</p>
+              <p className="text-xs text-gray-500">Date Evénement</p>
               <p className="font-medium">
                 {eventDate ? new Date(eventDate).toLocaleDateString('fr-FR') : ''}
               </p>

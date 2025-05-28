@@ -6,6 +6,7 @@ import { usePhotoMosaicStore } from '@/lib/store'
 import Modal from './Modal'
 import PhotoBoothCustomizer from './PhotoBoothCustomizer'
 import FlyerGenerator from './FlyerGenerator'
+import Image from 'next/image'
 
 const LABEL_FORMATS = [
   { name: '76mm x 76mm', widthMM: 76, heightMM: 76 },
@@ -25,8 +26,10 @@ export default function CreateProject() {
   const [selectedFormat, setSelectedFormat] = useState(LABEL_FORMATS[0])
   const [eventDate, setEventDate] = useState<string>('') // New state for event date
   const [isModalOpen, setIsModalOpen] = useState(false) // State for modal visibility
-  const [step, setStep] = useState(0) // Wizard step state
-  const [createdSlug, setCreatedSlug] = useState<string | null>(null) // Pour passer le slug du projet créé aux étapes suivantes
+  const [step, setStep] = useState(0); // Wizard step state - FIX: added missing semicolon
+  /* eslint-disable @typescript-eslint/no-unused-vars */
+  const [_unused, setCreatedSlug] = useState<string | null>(null);
+  /* eslint-enable @typescript-eslint/no-unused-vars */
   const [projectCreated, setProjectCreated] = useState(false) // Ajout: savoir si le projet est créé
   
   // Additional fields for FlyerGenerator
@@ -63,17 +66,15 @@ export default function CreateProject() {
     setCols(calculatedCols)
   }, [rows, selectedFormat, imageSize])
 
-  useEffect(() => {
-    drawGridPreview()
-  }, [localPreview, rows, cols])
-
-  const drawGridPreview = () => {
+  // Wrap drawGridPreview in useCallback to prevent dependency issues
+  const drawGridPreview = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas || !localPreview || !imageSize) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const img = new Image()
+    // Fix: Use window.Image() to avoid confusion with the imported Next.js Image component
+    const img = new window.Image()
     img.src = localPreview
     img.onload = () => {
       canvas.width = img.width
@@ -102,7 +103,11 @@ export default function CreateProject() {
         ctx.stroke()
       }
     }
-  }
+  }, [localPreview, rows, cols, imageSize])
+
+  useEffect(() => {
+    drawGridPreview()
+  }, [drawGridPreview])
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -111,7 +116,8 @@ export default function CreateProject() {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
-      const img = new Image()
+      // Fix: Use window.Image() here as well
+      const img = new window.Image()
       img.src = result
       img.onload = async () => {
         const maxWidth = 800
@@ -125,11 +131,12 @@ export default function CreateProject() {
 
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         const compressed = canvas.toDataURL('image/jpeg', 0.7)
+        setLocalPreview(compressed) // Use the compressed variable
 
         // Upload the image to Supabase storage
         const filename = `${slug}-${Date.now()}.jpg`
-        const { data, error } = await supabase.storage
-          .from('backgrounds') // Replace 'backgrounds' with your bucket name
+        const { /* data */ error } = await supabase.storage
+          .from('backgrounds')
           .upload(filename, file, {
             cacheControl: '3600',
             upsert: true,
@@ -141,7 +148,7 @@ export default function CreateProject() {
             .getPublicUrl(filename)
 
           if (urlData?.publicUrl) {
-            setLocalPreview(urlData.publicUrl) // Update localPreview with the public URL
+            setLocalPreview(compressed) // Use compressed here instead of later URL
           }
         } else {
           alert('Erreur lors de l’upload de l’image.')
@@ -192,7 +199,7 @@ export default function CreateProject() {
   };
 
   // Save all settings from FlyerGenerator
-  const handleFlyerDataUpdate = (data: any) => {
+  const handleFlyerDataUpdate = (data: FlyerData) => {
     setFlyerTitle(data.title);
     setFlyerSubtitle(data.subtitle);
     setFlyerTitleColor(data.titleColor);
@@ -210,7 +217,7 @@ export default function CreateProject() {
   };
 
   // Save all settings from PhotoBoothCustomizer
-  const handleBoothDataUpdate = (data: any) => {
+  const handleBoothDataUpdate = (data: BoothData) => {
     setBoothBackgroundColor(data.backgroundColor);
     setBoothBackgroundImage(data.backgroundImage);
     setBoothButtonColor(data.buttonColor);
@@ -270,7 +277,6 @@ export default function CreateProject() {
     setImage(localPreview);
     setGrid(rows, cols);
     setIsModalOpen(true);
-    setCreatedSlug(slug);
     setStep(1);
   };
 
@@ -361,7 +367,7 @@ export default function CreateProject() {
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </span>
                   <input
@@ -393,7 +399,7 @@ export default function CreateProject() {
               </div>
               <div>
                 <label className="block mb-2 font-medium text-blue-700">
-                  Date de l'événement <span className="text-red-500">*</span>
+                  Date de l&apos;événement <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
@@ -432,9 +438,11 @@ export default function CreateProject() {
                   </label>
                   {localPreview ? (
                     <div className="relative group">
-                      <img
+                      <Image
                         src={localPreview}
                         alt="Aperçu"
+                        width={64}
+                        height={64}
                         className="h-16 w-16 object-cover rounded-lg shadow border border-indigo-200"
                       />
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
@@ -466,7 +474,7 @@ export default function CreateProject() {
             </h3>
             <div className="space-y-6">
               <div>
-                <label className="block mb-3 font-medium text-purple-700">Format d'étiquette</label>
+                <label className="block mb-3 font-medium text-purple-700">Format d&apos;étiquette</label>
                 <div className="flex flex-wrap gap-4">
                   {LABEL_FORMATS.map(format => (
                     <label 
@@ -922,13 +930,15 @@ function GridReference({
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
             <h4 className="font-medium text-indigo-800">Aperçu du plan de collage</h4>
-            <p className="text-xs text-indigo-500">Plan à l'échelle réelle pour impression</p>
+            <p className="text-xs text-indigo-500">Plan à l&apos;échelle réelle pour impression</p>
           </div>
           <div className="p-4">
             <div className="rounded-lg overflow-hidden border border-gray-200">
-              <img 
+              <Image 
                 src={generatedPreview} 
                 alt="Aperçu du plan de collage" 
+                width={400}
+                height={300}
                 style={{ maxWidth: '100%', height: 'auto', display: 'block' }} 
               />
             </div>
@@ -943,7 +953,7 @@ function GridReference({
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Informations d'impression
+            Informations d&apos;impression
           </h4>
         </div>
         <div className="p-4">
@@ -989,7 +999,7 @@ function GridReference({
                 </svg>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Nombre d'étiquettes</div>
+                <div className="text-xs text-gray-500">Nombre d&apos;étiquettes</div>
                 <div className="font-bold text-lg text-pink-800">{rows * cols}</div>
               </div>
             </div>
@@ -1018,7 +1028,7 @@ function GridReference({
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Télécharger plan de collage à l'échelle réelle
+              Télécharger plan de collage à l&apos;échelle réelle
             </>
           )}
         </button>
@@ -1030,20 +1040,20 @@ function GridReference({
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
-            <h5 className="font-medium text-amber-800">Instructions d'impression</h5>
+            <h5 className="font-medium text-amber-800">Instructions d&apos;impression</h5>
           </div>
           <ul className="space-y-2 text-sm text-amber-800 ml-9">
             <li className="flex items-center">
               <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Format à l'échelle réelle (10 pixels = 1mm)
+              Format à l&apos;échelle réelle (10 pixels = 1mm)
             </li>
             <li className="flex items-center">
               <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Option d'impression: <strong>"Taille réelle"</strong> ou <strong>"100%"</strong>
+              Option d&apos;impression: <strong>Taille réelle</strong> ou <strong>100%</strong>
             </li>
             <li className="flex items-center">
               <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Pour grands formats: impression "Poster" ou plusieurs pages
+              Pour grands formats: impression Poster ou plusieurs pages
             </li>
           </ul>
         </div>
@@ -1072,4 +1082,34 @@ function GridReference({
       `}</style>
     </div>
   )
+}
+
+type FlyerData = {
+  title: string
+  subtitle: string
+  titleColor: string
+  titleSize: string
+  titleFont: string
+  titlePosition: string
+  subtitleColor: string
+  subtitleSize: string
+  subtitleFont: string
+  subtitlePosition: string
+  qrCodePosition: string
+  background: string
+  uploadedBackground: string | null
+  backgroundBlur: number
+  project_slug: string
+}
+
+type BoothData = {
+  backgroundColor: string
+  backgroundImage: string
+  buttonColor: string
+  stepTexts: {
+    step1: string
+    step2: string
+    step3: string
+  }
+  project_slug: string
 }

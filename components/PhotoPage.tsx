@@ -6,6 +6,7 @@ import WebcamCapture, { WebcamCaptureHandle } from '@/components/WebcamCapture'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { uploadImage, saveTile, loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
+import Image from 'next/image'
 
 type MosaicTile = { src: string; row: number; col: number }
 
@@ -93,7 +94,7 @@ export default function PhotoPage() {
     }
 
     init()
-  }, [slug])
+  }, [slug, router, store])
 
   const handleTakePhotoClick = () => {
     setCountdown(3)
@@ -240,7 +241,7 @@ export default function PhotoPage() {
         <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white text-center">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2">📸 Photobooth – {slug}</h1>
           <p className="text-white text-opacity-80">
-            Participez à la mosaïque photo de l'événement !
+            Participez à la mosaïque photo de l&apos;événement !
           </p>
         </div>
       </div>
@@ -287,9 +288,11 @@ export default function PhotoPage() {
           <div className="flex flex-col items-center space-y-4 mt-4 w-full">
             <h3 className="text-2xl font-semibold text-gray-800">{stepTexts.step3}</h3>
             <div className="flex justify-center">
-              <img
+              <Image
                 src={capturedImage}
                 alt="Aperçu"
+                width={300}
+                height={300}
                 className="w-[300px] h-[300px] object-cover border border-gray-300 rounded-md shadow"
               />
             </div>

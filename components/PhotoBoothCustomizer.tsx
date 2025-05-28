@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Modal from './Modal'
+import Image from 'next/image';
 
 type BoothConfig = {
   backgroundColor: string
@@ -131,7 +132,7 @@ export default function PhotoBoothCustomizer({
     if (!file || !selectedSlug) return;
 
     const filename = `${selectedSlug}-${Date.now()}.${file.name.split('.').pop()}`;
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('backgrounds')
       .upload(filename, file, {
         cacheControl: '3600',
@@ -139,12 +140,13 @@ export default function PhotoBoothCustomizer({
       });
 
     if (!error) {
-      const { data: urlData } = supabase.storage
+      // Get the public URL without destructuring to unused variables
+      const publicUrlResult = supabase.storage
         .from('backgrounds')
         .getPublicUrl(filename);
 
-      if (urlData?.publicUrl) {
-        setConfig(prev => ({ ...prev, backgroundImage: urlData.publicUrl }));
+      if (publicUrlResult.data?.publicUrl) {
+        setConfig(prev => ({ ...prev, backgroundImage: publicUrlResult.data.publicUrl }));
       }
     } else {
       alert("Erreur lors de l'upload de l'image.");
@@ -191,7 +193,7 @@ export default function PhotoBoothCustomizer({
       {!hideProjectSelect && (
         <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
           <h2 className="text-3xl font-bold mb-2">🎨 Design du Photobooth</h2>
-          <p className="text-white text-opacity-80">Personnalisez l'apparence de votre photobooth pour votre événement.</p>
+          <p className="text-white text-opacity-80">Personnalisez l&apos;apparence de votre photobooth pour votre événement.</p>
         </div>
       )}
       
@@ -242,7 +244,7 @@ export default function PhotoBoothCustomizer({
             
             <div className="space-y-5">
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Image d'arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700">Image d&apos;arrière-plan</label>
                 <div className="flex flex-wrap gap-3 items-center">
                   <label
                     htmlFor="background-upload"
@@ -273,9 +275,11 @@ export default function PhotoBoothCustomizer({
                   
                   {config.backgroundImage && (
                     <div className="relative group h-14 w-14 rounded-lg shadow-sm overflow-hidden border border-purple-200">
-                      <img 
+                      <Image 
                         src={config.backgroundImage} 
                         alt="Aperçu arrière-plan" 
+                        width={56}
+                        height={56}
                         className="h-full w-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
@@ -287,12 +291,12 @@ export default function PhotoBoothCustomizer({
                     </div>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-purple-600">Choisissez une image d'arrière-plan pour votre photobooth.</p>
+                <p className="mt-1 text-xs text-purple-600">Choisissez une image d&apos;arrière-plan pour votre photobooth.</p>
               </div>
               
               <div className="grid md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-2 font-medium text-purple-700">Couleur d'arrière-plan</label>
+                  <label className="block mb-2 font-medium text-purple-700">Couleur d&apos;arrière-plan</label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
@@ -472,7 +476,7 @@ export default function PhotoBoothCustomizer({
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            Galerie d'arrière-plans
+            Galerie d&apos;arrière-plans
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
             {PREDEFINED_BACKGROUNDS.map((bg) => (
@@ -481,7 +485,13 @@ export default function PhotoBoothCustomizer({
                 className="relative group cursor-pointer overflow-hidden border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all"
                 onClick={() => handleBackgroundImageSelect(bg.value)}
               >
-                <img src={bg.value} alt={bg.name} className="w-full h-32 object-cover" />
+                <Image 
+                  src={bg.value} 
+                  alt={bg.name} 
+                  width={300}
+                  height={128}
+                  className="w-full h-32 object-cover" 
+                />
                 <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black to-transparent p-3">
                   <p className="text-white font-medium text-center">{bg.name}</p>
                 </div>

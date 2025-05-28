@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import { supabase } from '@/lib/supabase'
+import Image from 'next/image'
 
 type Props = {
   tiles: Tile[]
@@ -26,8 +27,6 @@ const PhotosTab: React.FC<Props> = ({
   tileToDelete,
   deleteTile,
 }) => {
-  const previousTilesRef = useRef<Tile[]>([])
-
   const filteredTiles = selectedProject === 'all'
     ? tiles
     : tiles.filter(tile => tile.project_slug === selectedProject)
@@ -107,8 +106,11 @@ const PhotosTab: React.FC<Props> = ({
                 key={tile.id}
                 className="relative rounded-md overflow-hidden group bg-gray-50 shadow-xl hover:shadow-2xl transition"
               >
-                <img
+                <Image
                   src={tile.image_url}
+                  alt={`Mosaic tile ${tile.project_slug} ${String.fromCharCode(65 + tile.row)}-${tile.col + 1}`}
+                  width={300}
+                  height={300}
                   className="rounded-t-md w-full object-cover aspect-square"
                 />
                 <div className="absolute top-2 left-2 px-3 py-1 rounded-lg shadow-lg font-mono text-xs font-semibold bg-white/70 backdrop-blur-md text-gray-800 border border-white/60 flex flex-col items-start transition-all">
@@ -142,7 +144,13 @@ const PhotosTab: React.FC<Props> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-[90%] max-w-sm p-6">
             <h3 className="text-lg font-bold mb-4 text-gray-800">Supprimer cette image ?</h3>
-            <img src={tileToDelete.url} alt="" className="w-full h-auto rounded mb-4" />
+            <Image 
+              src={tileToDelete.url} 
+              alt="Image to delete" 
+              width={400}
+              height={300}
+              className="w-full h-auto rounded mb-4" 
+            />
             <div className="text-right space-x-3">
               <button
                 onClick={() => {

@@ -87,4 +87,6 @@ const WebcamCapture = forwardRef<WebcamCaptureHandle, Props>(({ countdown }, ref
   )
 })
 
+WebcamCapture.displayName = 'WebcamCapture'
+
 export default WebcamCapture

@@ -4,10 +4,33 @@ import { useEffect, useState, useRef } from 'react'
 import { toPng } from 'html-to-image'
 import { supabase } from '@/lib/supabase'
 import { useQRCode } from 'next-qrcode'
+import Image from 'next/image'
 
 type Project = {
   slug: string
   title: string
+}
+
+// Define a type for the flyer data
+type FlyerData = {
+  title: string
+  subtitle: string
+  titleColor: string
+  titleSize: string
+  titleFont: string
+  titlePosition: string
+  subtitleColor: string
+  subtitleSize: string
+  subtitleFont: string
+  subtitlePosition: string
+  qrCodeColor: string
+  qrCodeBgColor: string
+  qrCodePosition: string
+  adaptQrToBackground: boolean
+  background: string
+  uploadedBackground: string | null
+  backgroundBlur: number
+  project_slug: string
 }
 
 // Font options
@@ -37,7 +60,7 @@ interface FlyerGeneratorProps {
   initialSlug?: string;
   forceSlug?: string;
   hideProjectSelect?: boolean;
-  onDataChange?: (data: any) => void;
+  onDataChange?: (data: FlyerData) => void;
 }
 
 export default function FlyerGenerator({ 
@@ -612,7 +635,7 @@ export default function FlyerGenerator({
             
             <div className="space-y-5">
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Couleur d'arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700">Couleur arrière-plan</label>
                 <div className="flex items-center space-x-3">
                   <input
                     type="color"
@@ -639,7 +662,7 @@ export default function FlyerGenerator({
               </div>
               
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Image d'arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700">Image arrière-plan</label>
                 <div className="bg-white p-4 rounded-lg border border-purple-100 mb-3">
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <label
@@ -661,11 +684,15 @@ export default function FlyerGenerator({
                     
                     {uploadedBackground && (
                       <div className="relative group h-14 w-14 rounded-lg shadow-sm overflow-hidden border border-purple-200">
-                        <img 
-                          src={uploadedBackground} 
-                          alt="Aperçu arrière-plan" 
-                          className="h-full w-full object-cover"
-                        />
+                        {uploadedBackground && (
+                          <Image 
+                            src={uploadedBackground} 
+                            alt="Aperçu arrière-plan" 
+                            className="h-full w-full object-cover"
+                            width={56}
+                            height={56}
+                          />
+                        )}
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white opacity-0 group-hover:opacity-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -858,7 +885,7 @@ export default function FlyerGenerator({
               </li>
               <li className="flex items-center">
                 <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                Pour impression sur A4, sélectionnez "Ajuster à la page"
+                Pour impression sur A4, sélectionnez &quot;Ajuster à la page&quot;
               </li>
             </ul>
           </div>

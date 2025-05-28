@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -35,10 +35,10 @@ export default function SetupPage() {
 
   useEffect(() => {
     if (!slug) {
-      alert('ID manquant dans l’URL.')
+      alert('ID manquant dans URL.')
       router.push('/admin')
     }
-  }, [slug])
+  }, [slug, router])
 
   useEffect(() => {
     if (!imageSize || !selectedFormat) return
@@ -48,11 +48,8 @@ export default function SetupPage() {
     setCols(calculatedCols)
   }, [rows, selectedFormat, imageSize])
 
-  useEffect(() => {
-    drawGridPreview()
-  }, [localPreview, rows, cols])
-
-  const drawGridPreview = () => {
+  // Wrap drawGridPreview in useCallback to prevent infinite re-renders
+  const drawGridPreview = useCallback(() => {
     const canvas = canvasRef.current
     if (!canvas || !localPreview || !imageSize) return
     const ctx = canvas.getContext('2d')
@@ -88,7 +85,11 @@ export default function SetupPage() {
         ctx.stroke()
       }
     }
-  }
+  }, [localPreview, rows, cols, imageSize])
+
+  useEffect(() => {
+    drawGridPreview()
+  }, [drawGridPreview])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -151,7 +152,7 @@ export default function SetupPage() {
 
   return (
     <div style={{ padding: 32 }}>
-      <h1>🛠️ Configuration du projet "{slug}"</h1>
+      <h1>🛠️ Configuration du projet {slug}</h1>
 
       <div style={{ marginBottom: 24 }}>
         <label>Image principale :</label><br />

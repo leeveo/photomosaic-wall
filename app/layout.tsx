@@ -10,7 +10,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Photomosaic App",
   description: "Créez votre mur photo interactif",
-});
+};
 
 export default function RootLayout({
   children,

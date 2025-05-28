@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { loadTiles, clearTiles } from '@/lib/db.client'
+import { loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
 import CreateProject from '@/components/CreateProject'
 import ProjectCard from '@/components/ProjectCard'
@@ -13,6 +13,7 @@ import PhotosTab from '@/components/PhotosTab'
 import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit } from 'react-icons/fi'
 import Link from 'next/link'
 import { useQRCode } from 'next-qrcode'
+import Image from 'next/image'
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
@@ -23,11 +24,11 @@ type MosaicMeta = {
   title: string
   createdAt: string
   hasImage: boolean
-  setupImage?: string | null // <-- ajoutez cette ligne
+  setupImage?: string | null 
   rows: number
   cols: number
   tilesCount: number
-  eventDate?: string // ← ajouté ici
+  eventDate?: string
 }
 
 type Tile = {
@@ -38,6 +39,28 @@ type Tile = {
   project_slug: string
 }
 
+// Define type for project details
+type ProjectDetails = {
+  slug: string;
+  title: string;
+  created_at: string;
+  setup?: {
+    rows: number;
+    cols: number;
+    image: string | null;
+    event_date: string | null;
+  };
+  design?: {
+    background_color: string;
+    background_image: string;
+    button_color: string;
+    step1_text: string;
+    step2_text: string;
+    step3_text: string;
+  };
+  photosCount?: number;
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design'>('projects')
   const [selectedProject, setSelectedProject] = useState('all')
@@ -45,11 +68,13 @@ export default function AdminPage() {
   const [tiles, setTiles] = useState<Tile[]>([])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
-  const [showMosaicMenu, setShowMosaicMenu] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
-  // Ajoutez un nouvel état pour les détails du projet sélectionné
-  const [projectDetails, setProjectDetails] = useState<any>(null)
+  // Remove unused state variables
+  // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
+
+  // Use proper type instead of any
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
   const { Canvas: QRCanvas } = useQRCode()
 
@@ -92,15 +117,6 @@ export default function AdminPage() {
     fetchAll()
   }, [])
 
-  const handleDeleteProject = async (slug: string) => {
-    if (!confirm(`Supprimer le projet "${slug}" ?`)) return
-    await clearTiles(slug)
-    await supabase.from('setups').delete().eq('project_slug', slug)
-    await supabase.from('projects').delete().eq('slug', slug)
-    setProjects(prev => prev.filter(p => p.slug !== slug))
-    setTiles(prev => prev.filter(t => t.project_slug !== slug))
-  }
-
   const deleteTile = async (tileId: string, imageUrl: string) => {
     await supabase.from('tiles').delete().eq('id', tileId)
     if (imageUrl) {
@@ -128,7 +144,6 @@ export default function AdminPage() {
                 eventDate={p.eventDate}
                 client="Client Inconnu"
                 owner="Admin"
-                deadline="Non défini"
                 status={
                   p.tilesCount === 0
                     ? 'pending'
@@ -282,7 +297,9 @@ export default function AdminPage() {
     totalPhotos: 0,
   });
   const [projectsWithPhotoCount, setProjectsWithPhotoCount] = useState<{ [k: string]: number }>({});
-  const [photoCountsLoading, setPhotoCountsLoading] = useState(false);
+  
+  // Remove unused state variable
+  // const [photoCountsLoading, setPhotoCountsLoading] = useState(false);
 
   useEffect(() => {
     setStats(s => ({ ...s, totalPhotos: tiles.length }));
@@ -351,7 +368,7 @@ export default function AdminPage() {
               <div>
                 <p className="text-sm font-medium text-white text-opacity-80">Total des photos générées</p>
                 <div className="flex items-center">
-                  <span className="text-4xl font-bold">{photoCountsLoading ? '...' : stats.totalPhotos}</span>
+                  <span className="text-4xl font-bold">{stats.totalPhotos}</span>
                   <span className="ml-2 text-sm text-white text-opacity-70">images créées</span>
                 </div>
               </div>
@@ -401,7 +418,7 @@ export default function AdminPage() {
           (
             <div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.slice(0, 6).map((project, idx) => {
+                {projects.slice(0, 6).map((project) => {
                   const totalPhotosMosaic = project.rows * project.cols;
                   const mainImageUrl: string | undefined = project.hasImage && project.setupImage ? project.setupImage : undefined;
                   
@@ -603,7 +620,7 @@ export default function AdminPage() {
               </span>
             </div>
             <p className="mt-2 text-sm text-blue-600">
-              Gérez les images d'arrière-plan de votre photobooth
+              Gérez les images d&apos;arrière-plan de votre photobooth
             </p>
           </div>
           <div className="p-6 bg-purple-50 border-l-4 border-purple-400 rounded-lg shadow">
@@ -635,46 +652,46 @@ export default function AdminPage() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Guide rapide</h3>
           <div className="space-y-4">
             <div className="p-4 border border-blue-200 bg-blue-50 rounded-md">
-              <h4 className="font-medium text-blue-800">1. Création d'un nouveau projet</h4>
+              <h4 className="font-medium text-blue-800">1. Création d&apos;un nouveau projet</h4>
               <p className="mt-1 text-sm text-blue-600">
-                Commencez par créer un nouveau projet dans la section "Projets". Renseignez le nom, le slug URL,
+                Commencez par créer un nouveau projet dans la section Projets . Renseignez le nom, le slug URL,
                 choisissez le type de photobooth et personnalisez les couleurs.
               </p>
             </div>
             <div className="p-4 border border-purple-200 bg-purple-50 rounded-md">
               <h4 className="font-medium text-purple-800">2. Configuration du filigrane</h4>
               <p className="mt-1 text-sm text-purple-600">
-                Dans l'onglet "Filigrane" de votre projet, activez et personnalisez le filigrane qui apparaîtra sur les photos.
+                Dans l&apos;onglet Filigrane de votre projet, activez et personnalisez le filigrane qui apparaîtra sur les photos.
               </p>
             </div>
             <div className="p-4 border border-green-200 bg-green-50 rounded-md">
               <h4 className="font-medium text-green-800">3. Ajout des styles</h4>
               <p className="mt-1 text-sm text-green-600">
-                Dans l'onglet "Styles" du projet, ajoutez différents styles de vêtements pour chaque catégorie.
+                Dans l&apos;onglet Styles du projet, ajoutez différents styles de vêtements pour chaque catégorie.
               </p>
             </div>
             <div className="p-4 border border-blue-200 bg-blue-50 rounded-md">
               <h4 className="font-medium text-blue-800">4. Ajout des arrière-plans</h4>
               <p className="mt-1 text-sm text-blue-600">
-                Dans l'onglet "Arrière-plans", téléchargez des images qui seront disponibles comme fond pour les photos.
+                Dans l&apos;onglet Arrière-plans, téléchargez des images qui seront disponibles comme fond pour les photos.
               </p>
             </div>
             <div className="p-4 border border-purple-200 bg-purple-50 rounded-md">
               <h4 className="font-medium text-purple-800">5. Personnalisation de la galerie mosaïque</h4>
               <p className="mt-1 text-sm text-purple-600">
-                Accédez à "Galerie" pour configurer l'affichage mosaïque des photos.
+                Accédez à l&apos;onglet Galerie pour configurer l&apos;affichage mosaïque des photos.
               </p>
             </div>
             <div className="p-4 border border-green-200 bg-green-50 rounded-md">
               <h4 className="font-medium text-green-800">6. Test et déploiement</h4>
               <p className="mt-1 text-sm text-green-600">
-                Une fois votre projet configuré, testez-le en accédant à l'URL du photobooth.
+                Une fois votre projet configuré, testez-le en accédant à l&apos;URL du photobooth.
               </p>
             </div>
             <div className="p-4 border border-blue-200 bg-blue-50 rounded-md">
               <h4 className="font-medium text-blue-800">7. Gestion des photos générées</h4>
               <p className="mt-1 text-sm text-blue-600">
-                Depuis la page "Galerie", vous pouvez visualiser et gérer toutes les photos générées pour chaque projet.
+                Depuis la page &quot;Galerie&quot;, vous pouvez visualiser et gérer toutes les photos générées pour chaque projet.
               </p>
             </div>
           </div>
@@ -718,7 +735,7 @@ export default function AdminPage() {
               key={tab}
               onClick={() => {
                 setIsSidebarOpen(false)
-                setActiveTab(tab as any)
+                setActiveTab(tab as 'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design')
               }}
               className={`flex items-center gap-2 px-6 py-3 rounded-md w-full justify-start ${
                 activeTab === tab
@@ -733,10 +750,9 @@ export default function AdminPage() {
           <hr className="my-6 border-gray-200" />
           <button
             onClick={() => router.push('/')}
-
             className="w-full flex items-center px-6 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600"
           >
-            <span className="mx-4">⬅️ Retour à l'accueil</span>
+            <span className="mx-4">⬅️ Retour à l&apos;accueil</span>
           </button>
         </nav>
       </div>
@@ -803,9 +819,11 @@ export default function AdminPage() {
               {/* Affichage image principale sous le nom du projet */}
               {projectDetails.setup?.image && (
                 <div className="flex justify-center mb-6">
-                  <img
+                  <Image
                     src={projectDetails.setup.image}
                     alt="Image principale"
+                    width={300}
+                    height={200}
                     className="h-32 rounded shadow border bg-white object-contain"
                     style={{ maxWidth: '60%' }}
                   />
@@ -848,7 +866,13 @@ export default function AdminPage() {
                   <div>
                     <span className="font-semibold text-gray-700 text-lg">Image principale:</span>{' '}
                     {projectDetails.setup?.image ? (
-                      <img src={projectDetails.setup.image} alt="main" className="inline-block h-24 rounded shadow border" />
+                      <Image 
+                        src={projectDetails.setup.image} 
+                        alt="main" 
+                        width={96}
+                        height={96}
+                        className="inline-block h-24 rounded shadow border" 
+                      />
                     ) : (
                       <span className="text-gray-400 text-lg">-</span>
                     )}
@@ -868,7 +892,13 @@ export default function AdminPage() {
                   <div>
                     <span className="font-semibold text-gray-700 text-lg">Image fond:</span>{' '}
                     {projectDetails.design?.background_image ? (
-                      <img src={projectDetails.design.background_image} alt="bg" className="inline-block h-24 rounded shadow border" />
+                      <Image 
+                        src={projectDetails.design.background_image} 
+                        alt="bg" 
+                        width={96}
+                        height={96}
+                        className="inline-block h-24 rounded shadow border" 
+                      />
                     ) : (
                       <span className="text-gray-400 text-lg">-</span>
                     )}

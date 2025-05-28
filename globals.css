@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+.btn-primary {
+  @apply bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md transition;
+}
+.btn-secondary {
+  @apply bg-purple-100 hover:bg-purple-200 text-purple-800 px-4 py-2 rounded-md transition;
+}

@@ -29,7 +29,7 @@ export default function CreateProject() {
   const [step, setStep] = useState(0); // Wizard step state - FIX: added missing semicolon
   /* eslint-disable @typescript-eslint/no-unused-vars */
   const [_unused, setCreatedSlug] = useState<string | null>(null);
-  /* eslint-enable @typescript-eslint/no-unused-vars */
+  /* eslint-enable @typescript-eslint/no-unused-vars  */
   const [projectCreated, setProjectCreated] = useState(false) // Ajout: savoir si le projet est créé
   
   // Additional fields for FlyerGenerator

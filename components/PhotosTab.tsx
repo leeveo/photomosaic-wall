@@ -2,6 +2,26 @@ import React from 'react'
 import { supabase } from '@/lib/supabase'
 import Image from 'next/image'
 
+type Tile = {
+  id: string
+  image_url: string
+  row: number
+  col: number
+  project_slug: string
+}
+
+type MosaicMeta = {
+  slug: string
+  title: string
+  createdAt: string
+  hasImage: boolean
+  setupImage?: string | null 
+  rows: number
+  cols: number
+  tilesCount: number
+  eventDate?: string
+}
+
 type Props = {
   tiles: Tile[]
   projects: MosaicMeta[]

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { Suspense, useEffect, useRef, useState, useCallback } from 'react'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -17,7 +17,7 @@ const LABEL_FORMATS: LabelFormat[] = [
   { name: '100mm x 150mm', widthMM: 100, heightMM: 150 }
 ]
 
-export default function SetupPage() {
+function SetupPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const slug = searchParams.get('id')
@@ -55,7 +55,7 @@ export default function SetupPage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const img = new Image()
+    const img = new window.Image()
     img.src = localPreview
     img.onload = () => {
       const { width, height } = img
@@ -98,7 +98,7 @@ export default function SetupPage() {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
-      const img = new Image()
+      const img = new window.Image()
       img.src = result
       img.onload = () => {
         const maxWidth = 800
@@ -123,7 +123,7 @@ export default function SetupPage() {
     if (!slug || !localPreview) return
 
     try {
-      // Supprimer un ancien setup s’il existe
+      // Supprimer un ancien setup s'il existe
       await supabase.from('setups').delete().eq('project_slug', slug)
 
       // Ajouter le nouveau setup
@@ -215,5 +215,13 @@ export default function SetupPage() {
         🚀 Lancer le mur photo
       </button>
     </div>
+  )
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 32 }}>Chargement de la configuration...</div>}>
+      <SetupPageContent />
+    </Suspense>
   )
 }

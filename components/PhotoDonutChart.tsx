@@ -36,7 +36,6 @@ export default function PhotoDonutChart({ taken, total }: Props) {
           >
             <RadialBar
               background
-              clockWise
               dataKey="value"
               cornerRadius={10}
             />

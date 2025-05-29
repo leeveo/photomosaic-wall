@@ -164,8 +164,8 @@ export default function PhotoPage() {
     col: number
   ): Promise<string> => {
     return new Promise(resolve => {
-      const userImg = new Image()
-      const mosaicImg = new Image()
+      const userImg = new window.Image()
+      const mosaicImg = new window.Image()
 
       userImg.crossOrigin = 'anonymous'
       mosaicImg.crossOrigin = 'anonymous'
@@ -272,7 +272,7 @@ export default function PhotoPage() {
 
         {step === 2 && (
           <div className="flex flex-col items-center gap-6 w-full">
-            <WebcamCapture ref={webcamRef} countdown={countdown} />
+            <WebcamCapture ref={webcamRef} countdown={countdown ?? undefined} />
             {countdown === null && (
               <button
                 onClick={handleTakePhotoClick}

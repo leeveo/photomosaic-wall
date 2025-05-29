@@ -1,7 +1,7 @@
 'use client'
 
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useEffect, useState, useRef } from 'react'
 import MosaicCanvas from '@/components/MosaicCanvas'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { loadTiles } from '@/lib/db.client'
@@ -21,7 +21,7 @@ type DbTile = {
   col: number
 }
 
-export default function MosaicDisplayPage() {
+function MosaicPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const slug = searchParams.get('id')
@@ -182,5 +182,13 @@ export default function MosaicDisplayPage() {
       {/* Supprimé le titre pour plus d'espace */}
       <MosaicCanvas tiles={tiles} />
     </div>
+  )
+}
+
+export default function MosaicPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Chargement de la mosaïque...</div>}>
+      <MosaicPageContent />
+    </Suspense>
   )
 }

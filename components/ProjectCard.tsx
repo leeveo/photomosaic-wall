@@ -75,7 +75,7 @@ export default function ProjectCard({
 
       await supabase.from('tiles').delete().eq('project_slug', slug)
       await supabase.from('setups').delete().eq('project_slug', slug)
-      await supabase.from('projects').delete().eq('slug', slug)
+      await supabase.from('projectsmosaic').delete().eq('slug', slug)
 
       alert('✅ Projet supprimé.')
       location.reload()

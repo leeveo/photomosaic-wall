@@ -2,10 +2,14 @@
 
 import { supabase } from './supabase'
 
-/* 🔹 Créer un projet */
+// Utilisation de la table 'projects' dans les fonctions suivantes :
+// - saveProject
+// - getProject
+// - updateProject
+// (ainsi que dans handleCreateProjectOnly, handleCreate, etc. si appelé ailleurs)
 export async function saveProject(slug: string, title: string) {
   const { error } = await supabase
-    .from('projects')
+    .from('projectsmosaic')
     .insert([{ slug, title }])
 
   if (error) {
@@ -104,7 +108,7 @@ export async function clearTiles(slug: string) {
 /* 🔹 Récupérer un projet */
 export async function getProject(slug: string) {
   const { data, error } = await supabase
-    .from('projects')
+    .from('projectsmosaic')
     .select('*')
     .eq('slug', slug)
     .single()
@@ -123,7 +127,7 @@ export async function updateProject(
   updates: Partial<{ image: string; rows: number; cols: number }>
 ) {
   const { error, data } = await supabase
-    .from('projects')
+    .from('projectsmosaic')
     .update(updates)
     .eq('slug', slug)
 

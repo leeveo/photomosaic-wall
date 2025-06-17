@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
@@ -10,10 +10,12 @@ import PhotoDonutChart from '@/components/PhotoDonutChart'
 import FlyerGenerator from '@/components/FlyerGenerator'
 import PhotoBoothCustomizer from '@/components/PhotoBoothCustomizer'
 import PhotosTab from '@/components/PhotosTab'
-import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit } from 'react-icons/fi'
+import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit, FiChevronDown, FiLogOut } from 'react-icons/fi'
 import Link from 'next/link'
 import { useQRCode } from 'next-qrcode'
 import Image from 'next/image'
+import { useSharedAuth } from '@/hooks/useSharedAuth'
+import Cookies from 'js-cookie'
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
@@ -69,20 +71,42 @@ export default function AdminPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-
-  // Remove unused state variables
-  // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
-
-  // Use proper type instead of any
-  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null)
-  const [showProjectDetails, setShowProjectDetails] = useState(false)
-  const { Canvas: QRCanvas } = useQRCode()
+  
+  // User auth state
+  const { user, loading } = useSharedAuth()
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
+  const adminEmail = user?.email || 'Utilisateur'
 
   const router = useRouter()
 
+  // Close user menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Handle logout
+  const handleLogout = () => {
+    Cookies.remove('shared_auth_token')
+    window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL || ''}/photobooth-ia/admin/login?redirect=${encodeURIComponent(window.location.href)}`
+  }
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/')
+    }
+  }, [loading, user, router])
+
   useEffect(() => {
     const fetchAll = async () => {
-      const { data: projectsRaw } = await supabase.from('projects').select('slug, title, created_at')
+      const { data: projectsRaw } = await supabase.from('projectsmosaic').select('slug, title, created_at')
       if (!projectsRaw) return
 
       const enriched: MosaicMeta[] = []
@@ -314,7 +338,7 @@ export default function AdminPage() {
   async function fetchProjectDetails(slug: string) {
     // Récupère les infos du projet
     const { data: project } = await supabase
-      .from('projects')
+      .from('projectsmosaic')
       .select('*')
       .eq('slug', slug)
       .single()
@@ -768,34 +792,78 @@ export default function AdminPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <header className="bg-white shadow pl-4 lg:pl-0 sticky top-0 z-10">
-          <div className="px-6 py-4 flex items-center">
-            {/* Mobile hamburger menu button */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="mr-4 lg:hidden"
-              aria-label="Toggle menu"
-            >
-              <svg
-                className="h-6 w-6 text-gray-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center">
+              <button 
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                className="mr-4 lg:hidden" 
+                aria-label="Toggle menu"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <h2 className="font-semibold text-xl text-gray-800">
-              Dashboard
-            </h2>
+                <svg 
+                  className="h-6 w-6 text-gray-600" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <h2 className="font-semibold text-xl text-gray-800">
+                Dashboard
+              </h2>
+            </div>
+
+            {/* User Profile Menu */}
+            {!loading && user && (
+              <div className="relative" ref={userMenuRef}>
+                <button 
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center space-x-2 focus:outline-none"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200 border-2 border-white">
+                    <span className="text-lg font-semibold">{adminEmail.charAt(0).toUpperCase()}</span>
+                  </div>
+                  <div className="hidden md:flex flex-col items-start">
+                    <span className="text-sm font-medium text-gray-700">Mon compte</span>
+                    <span className="text-xs text-gray-500 truncate max-w-[120px]">{adminEmail}</span>
+                  </div>
+                  <FiChevronDown className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : 'rotate-0'}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 transition-all duration-200 transform origin-top-right">
+                    <div className="p-4 border-b border-gray-100">
+                      <p className="text-sm text-gray-500">Connecté en tant que:</p>
+                      <p className="font-medium text-gray-800 truncate">{adminEmail}</p>
+                    </div>
+                    <div className="p-2">
+                      <button 
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <FiLogOut className="w-5 h-5" />
+                        <span>Déconnexion</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </header>
         <main className="p-6">
-          {activeTab === 'projects' ? renderDashboard() : renderContent()}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+            </div>
+          ) : user ? (
+            activeTab === 'projects' ? renderDashboard() : renderContent()
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Veuillez vous connecter pour accéder à cette page.</p>
+            </div>
+          )}
         </main>
       </div>
 

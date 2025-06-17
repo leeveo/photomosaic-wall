@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import Cookies from 'js-cookie';
+import { getAuthToken, removeAuthToken } from '@/utils/clientAuth';
 
 export function useSharedAuth() {
   const [user, setUser] = useState(null);
@@ -11,7 +11,7 @@ export function useSharedAuth() {
     async function checkAuth() {
       try {
         // Vérifier le token dans les cookies
-        const token = Cookies.get('shared_auth_token');
+        const token = getAuthToken();
         
         if (!token) {
           setLoading(false);
@@ -30,7 +30,7 @@ export function useSharedAuth() {
         
         if (!response.ok) {
           // Token invalide, supprimer le cookie
-          Cookies.remove('shared_auth_token');
+          removeAuthToken();
           setLoading(false);
           return;
         }

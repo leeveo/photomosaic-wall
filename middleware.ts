@@ -18,9 +18,10 @@ export default function middleware(request: NextRequest) {
     
     if (!hasAuthCookie) {
       // Rediriger vers la page de connexion de l'application principale
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
       const redirectUrl = encodeURIComponent(request.url);
       return NextResponse.redirect(
-        `${process.env.NEXT_PUBLIC_BASE_URL}/photobooth-ia/admin/login?redirect=${redirectUrl}`
+        `${baseUrl}/photobooth-ia/admin/login?redirect=${redirectUrl}`
       );
     }
   }

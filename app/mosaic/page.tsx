@@ -24,7 +24,7 @@ type DbTile = {
 function MosaicPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const slug = searchParams.get('id')
+  const slug = searchParams?.get('id') || ''
 
   const [tiles, setTiles] = useState<MosaicTile[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,7 +40,8 @@ function MosaicPageContent() {
 
   // Vérifie si l'utilisateur veut le fullscreen via l'URL
   useEffect(() => {
-    if (searchParams.get('fullscreen') === 'true') {
+    // Correction: Ajout de l'opérateur de chaînage optionnel
+    if (searchParams?.get('fullscreen') === 'true') {
       setWantsFullscreen(true)
     }
   }, [searchParams])

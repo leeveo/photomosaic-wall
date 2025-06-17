@@ -1,5 +1,8 @@
 'use client'
 
+// Ajouter cette directive pour forcer le rendu dynamique et éviter le prérendu
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTiles } from '@/lib/db.client'
@@ -64,6 +67,12 @@ type ProjectDetails = {
 }
 
 export default function AdminPage() {
+  // Vérifier si le code s'exécute côté client
+  const isBrowser = typeof window !== 'undefined';
+  
+  // N'utiliser le router que côté client
+  const router = isBrowser ? useRouter() : null;
+
   const [activeTab, setActiveTab] = useState<'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design'>('projects')
   const [selectedProject, setSelectedProject] = useState('all')
   const [projects, setProjects] = useState<MosaicMeta[]>([])
@@ -77,12 +86,14 @@ export default function AdminPage() {
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   
   // User auth state - Mise à jour avec le type correct
-  const { user, loading } = useSharedAuth()
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  const userMenuRef = useRef<HTMLDivElement>(null)
-  const adminEmail = user?.email || 'Utilisateur'
-
-  const router = useRouter()
+  const { user, loading } = useSharedAuth();
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  // Ajout d'une assertion de type pour user
+  const adminEmail = (user as SharedAuthUser)?.email || 'Utilisateur';
+  
+  // Correction: Déplacer la destructuration du hook useQRCode ici
+  const { Canvas: QRCanvas } = useQRCode();
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -101,12 +112,23 @@ export default function AdminPage() {
     window.location.href = `${process.env.NEXT_PUBLIC_BASE_URL || ''}/photobooth-ia/admin/login?redirect=${encodeURIComponent(window.location.href)}`
   }
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/')
+  // Fonction utilitaire sécurisée pour la navigation
+  const navigateTo = (path: string) => {
+    if (router) {
+      router.push(path);
+    } else if (isBrowser) {
+      // Fallback pour quand router n'est pas disponible mais nous sommes côté client
+      window.location.href = path;
     }
-  }, [loading, user, router])
+    // Ne fait rien côté serveur
+  };
+
+  // Redirect if not authenticated - avec vérification côté client uniquement
+  useEffect(() => {
+    if (isBrowser && !loading && !user) {
+      navigateTo('/');
+    }
+  }, [loading, user, isBrowser]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -777,7 +799,7 @@ export default function AdminPage() {
           ))}
           <hr className="my-6 border-gray-200" />
           <button
-            onClick={() => router.push('/')}
+            onClick={() => navigateTo('/')}
             className="w-full flex items-center px-6 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600"
           >
             <span className="mx-4">⬅️ Retour à l&apos;accueil</span>

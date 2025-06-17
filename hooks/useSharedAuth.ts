@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+// Remplacer l'import du router
+import { useRouter as useNextRouter } from 'next/navigation';
 import { getAuthToken, removeAuthToken } from '@/utils/clientAuth';
 
 // Définir le type d'utilisateur
@@ -10,10 +11,15 @@ export interface SharedAuthUser {
   role: string;
 }
 
-export function useSharedAuth() {
+export function useSharedAuth(): {
+  user: SharedAuthUser | null;
+  loading: boolean;
+} {
   const [user, setUser] = useState<SharedAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  // Utiliser un gestionnaire côté client uniquement
+  const isBrowser = typeof window !== 'undefined';
+  const router = isBrowser ? useNextRouter() : null;
 
   useEffect(() => {
     async function checkAuth() {
@@ -52,8 +58,13 @@ export function useSharedAuth() {
       }
     }
     
-    checkAuth();
-  }, [router]);
+    // Ne vérifier l'authentification que côté client
+    if (isBrowser) {
+      checkAuth();
+    } else {
+      setLoading(false);
+    }
+  }, [isBrowser]);
   
   return { user, loading };
 }

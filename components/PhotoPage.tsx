@@ -20,7 +20,7 @@ type BoothConfig = {
 export default function PhotoPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const slug = searchParams.get('id')
+  const slug = searchParams?.get('id') || ''
 
   const [tiles, setTiles] = useState<MosaicTile[]>([])
   const [loading, setLoading] = useState(true)

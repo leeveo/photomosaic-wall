@@ -17,10 +17,11 @@ const LABEL_FORMATS: LabelFormat[] = [
   { name: '100mm x 150mm', widthMM: 100, heightMM: 150 }
 ]
 
+// Le composant content qui utilise useSearchParams doit être enveloppé dans un Suspense
 function SetupPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const slug = searchParams.get('id')
+  const slug = searchParams?.get('id') || ''
 
   const { setImage, setGrid } = usePhotoMosaicStore()
 
@@ -218,7 +219,11 @@ function SetupPageContent() {
   )
 }
 
+// Le composant principal qui enveloppe avec Suspense
 export default function SetupPage() {
+  // Déplacer le store et la fonction setProjectDetails ici si nécessaire
+  const { setImage, setGrid } = usePhotoMosaicStore()
+  
   return (
     <Suspense fallback={<div style={{ padding: 32 }}>Chargement de la configuration...</div>}>
       <SetupPageContent />

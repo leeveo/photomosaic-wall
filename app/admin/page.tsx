@@ -14,7 +14,7 @@ import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit, FiChevron
 import Link from 'next/link'
 import { useQRCode } from 'next-qrcode'
 import Image from 'next/image'
-import { useSharedAuth } from '@/hooks/useSharedAuth'
+import { useSharedAuth, SharedAuthUser } from '@/hooks/useSharedAuth'
 import Cookies from 'js-cookie'
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -72,7 +72,11 @@ export default function AdminPage() {
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
-  // User auth state
+  // Ajout des états manquants pour les détails du projet
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
+  const [showProjectDetails, setShowProjectDetails] = useState(false);
+  
+  // User auth state - Mise à jour avec le type correct
   const { user, loading } = useSharedAuth()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)

@@ -2,8 +2,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { getAuthToken, removeAuthToken } from '@/utils/clientAuth';
 
+// Définir le type d'utilisateur
+export interface SharedAuthUser {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+}
+
 export function useSharedAuth() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<SharedAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 

@@ -18,10 +18,48 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
       return null;
     }
 
+    // Log token format for debugging (partial, for security)
+    console.log('Token format check:', {
+      length: token.length,
+      start: token.substring(0, 10),
+      containsDots: token.includes('.'),
+      parts: token.split('.').length
+    });
+
+    // Check if this is a non-JWT token (without dots)
+    if (!token.includes('.')) {
+      try {
+        // Try to decode as base64 directly
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        console.log('Attempting to decode as base64 string');
+        
+        try {
+          const parsedUser = JSON.parse(decoded);
+          console.log('Successfully parsed decoded token as JSON');
+          
+          // Check if it has expected fields
+          if (parsedUser.userId) {
+            return parsedUser as UserPayload;
+          }
+          console.log('Decoded token missing required fields');
+        } catch (jsonError) {
+          console.error('Failed to parse decoded token as JSON:', jsonError.message);
+        }
+      } catch (decodeError) {
+        console.error('Failed to decode token as base64:', decodeError.message);
+      }
+    }
+
+    // Standard JWT verification as fallback
     const secret = new TextEncoder().encode(SHARED_AUTH_SECRET);
-    const { payload } = await jwtVerify(token, secret);
     
-    return payload as unknown as UserPayload;
+    try {
+      const { payload } = await jwtVerify(token, secret);
+      return payload as unknown as UserPayload;
+    } catch (jwtError) {
+      console.error('JWT verification failed:', jwtError.message);
+      return null;
+    }
   } catch (error) {
     console.error('Error verifying shared token:', error);
     return null;
@@ -36,9 +74,11 @@ export async function getCurrentUser(req: NextRequest): Promise<UserPayload | nu
     const token = cookies.get?.(COOKIE_NAME)?.value;
     
     if (!token) {
+      console.log('No auth token found in cookies');
       return null;
     }
     
+    console.log('Found auth token in cookies, verifying...');
     return await verifySharedToken(token);
   } catch (error) {
     console.error('Error getting current user:', error);
@@ -48,6 +88,14 @@ export async function getCurrentUser(req: NextRequest): Promise<UserPayload | nu
 
 // Set the shared auth cookie on a response
 export function setSharedAuthCookie(response: NextResponse, token: string): NextResponse {
+  console.log('Setting shared auth cookie, token length:', token.length);
+  
+  // Sanitize token - ensure it's a valid JWT format (header.payload.signature)
+  if (!token.includes('.') || token.split('.').length !== 3) {
+    console.error('Invalid token format, not setting cookie');
+    return response;
+  }
+  
   response.cookies.set({
     name: COOKIE_NAME,
     value: token,

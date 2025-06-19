@@ -1,26 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { setSharedAuthCookie } from '@/utils/sharedAuth';
+import { setSharedAuthCookie, verifySharedToken } from '@/utils/sharedAuth';
 
 export async function GET(req: NextRequest) {
-  // Récupérer le token et l'URL de redirection depuis les paramètres
-  const searchParams = req.nextUrl.searchParams;
-  const token = searchParams.get('token');
-  const redirectTo = searchParams.get('redirect') || '/admin';
+  console.log('Auth callback received');
+  
+  // Get the token from the URL
+  const token = req.nextUrl.searchParams.get('token');
   
   if (!token) {
+    console.error('No token provided in callback');
     return NextResponse.json(
       { error: 'No token provided' },
       { status: 400 }
     );
   }
   
-  console.log('Callback reçu avec token:', token.substring(0, 10) + '...');
-  console.log('Redirection vers:', redirectTo);
+  console.log('Auth callback received with token:', {
+    length: token.length,
+    start: token.substring(0, 10),
+    format: token.includes('.') ? 'Contains dots' : 'No dots',
+    parts: token.split('.').length
+  });
   
-  // Créer une réponse qui redirige vers la page d'administration
+  // Verify the token is valid before setting it
+  const user = await verifySharedToken(token);
+  if (!user) {
+    console.error('Invalid token received in callback');
+    return NextResponse.json(
+      { error: 'Invalid token' },
+      { status: 400 }
+    );
+  }
+  
+  // Get the redirect URL from the query params or use default
+  const redirectTo = req.nextUrl.searchParams.get('redirect') || '/admin';
+  
+  console.log('Token verified, redirecting to:', redirectTo);
+  
+  // Create a response that redirects to the admin page
   const response = NextResponse.redirect(new URL(redirectTo, req.url));
   
-  // Définir le cookie d'authentification
+  // Set the auth cookie
   setSharedAuthCookie(response, token);
   
   return response;

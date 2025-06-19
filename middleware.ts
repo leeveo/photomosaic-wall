@@ -11,10 +11,7 @@ export async function middleware(req: NextRequest) {
   const isAdminRoute = path === '/admin' || path.startsWith('/admin/');
   
   // Skip authentication check for API routes and auth callback
-  const isExcluded = path === '/api/auth/callback';
-  
-  // Check if this is a login redirection
-  const isRedirectFromLogin = req.nextUrl.searchParams.has('from_login');
+  const isExcluded = path === '/api/auth/callback' || path.startsWith('/api/auth/');
   
   if (isAdminRoute && !isExcluded) {
     // Check if user is authenticated
@@ -22,10 +19,15 @@ export async function middleware(req: NextRequest) {
     
     console.log('Current user from shared auth:', user);
     
-    if (!user && !isRedirectFromLogin) {
+    if (!user) {
       // Not authenticated, redirect to main app login with return URL
       const returnUrl = new URL(req.url).origin + '/admin';
-      const loginUrl = new URL(process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login');
+      const callbackUrl = new URL(req.url).origin + '/api/auth/callback';
+      
+      // Construct the full login URL with both callback and return URL
+      const loginUrlBase = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login';
+      const loginUrl = new URL(loginUrlBase);
+      loginUrl.searchParams.set('callbackUrl', callbackUrl);
       loginUrl.searchParams.set('returnUrl', returnUrl);
       
       console.log('Redirecting to login:', loginUrl.toString());

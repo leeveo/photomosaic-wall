@@ -78,15 +78,27 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
 // Get the current user from the shared token cookie
 export async function getCurrentUser(req: NextRequest): Promise<UserPayload | null> {
   try {
+    // Check for token in URL parameters first (highest priority)
+    const tokenParam = req.nextUrl.searchParams.get('token');
+    if (tokenParam) {
+      console.log('Found token in URL params, verifying...');
+      return await verifySharedToken(tokenParam);
+    }
+    
     // Handle both Promise and non-Promise cookies (Vercel vs local)
     const cookies = req.cookies instanceof Promise ? await req.cookies : req.cookies;
     
-    // First try the secure cookie
+    // Try all possible cookie names
     let token = cookies.get?.('shared_auth_token_secure')?.value;
     
     // If not found, try the regular cookie
     if (!token) {
       token = cookies.get?.('shared_auth_token')?.value;
+    }
+    
+    // Try JS-set cookie
+    if (!token) {
+      token = cookies.get?.('shared_auth_token_js')?.value;
     }
     
     if (!token) {

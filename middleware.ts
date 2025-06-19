@@ -29,23 +29,22 @@ export async function middleware(req: NextRequest) {
       return NextResponse.next();
     }
     
+    // Check for token in URL first - ALWAYS allow access if token is in URL
+    const hasTokenInUrl = !!req.nextUrl.searchParams.get('token');
+    if (hasTokenInUrl) {
+      console.log('Middleware: Token found in URL, allowing access');
+      return NextResponse.next();
+    }
+    
     // Only enforce auth for admin routes
     if (path === '/admin' || path.startsWith('/admin/')) {
       const authenticated = isAuthenticated(req);
-      console.log(`Middleware auth check: path=${path}, authenticated=${authenticated}`, {
-        hasCookie: req.cookies.has('shared_auth_token'),
-        hasSecureCookie: req.cookies.has('shared_auth_token_secure'),
-        hasTokenParam: !!req.nextUrl.searchParams.get('token'),
-      });
+      console.log(`Middleware auth check: path=${path}, authenticated=${authenticated}`);
       
-      // Bypass auth check for certain user agents or with token in URL
+      // Skip auth check for crawlers
       const userAgent = req.headers.get('user-agent') || '';
       const isCrawler = userAgent.includes('bot') || userAgent.includes('crawler');
-      const hasTokenInUrl = !!req.nextUrl.searchParams.get('token');
-      
-      // Skip auth check for crawlers or if token is in URL
-      if (isCrawler || hasTokenInUrl) {
-        console.log('Bypassing auth check for crawler or token in URL');
+      if (isCrawler) {
         return NextResponse.next();
       }
       
@@ -59,8 +58,8 @@ export async function middleware(req: NextRequest) {
         
         // Use environment variable for login URL if available
         const loginBaseUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 
-                           'https://photobooth.waibooth.app/photobooth-ia/admin/login';
-                           
+                         'https://photobooth.waibooth.app/photobooth-ia/admin/login';
+                         
         const loginUrl = `${loginBaseUrl}?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
         
         console.log('Redirecting to:', loginUrl);

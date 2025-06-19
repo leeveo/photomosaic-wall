@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/utils/sharedAuth';
-import { supabase } from '@/lib/supabase'; // Use regular client as fallback
+
+// Use a simple in-memory cache to reduce duplicate requests
+const cache = new Map<string, { data: any, timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,34 +19,35 @@ export async function GET(req: NextRequest) {
       }, { status: 401 });
     }
 
-    // For debugging
-    console.log('Fetching user data for userId:', user.userId);
-
-    try {
-      // Simply return the user info from the token without database lookup
-      // This avoids Supabase service key issues in production
-      return NextResponse.json({
-        userId: user.userId,
-        email: user.email || `User ${user.userId.substring(0, 8)}...`,
-        timestamp: user.timestamp,
-        exp: user.exp
-      });
-    } catch (dbError) {
-      console.error('Database error in /api/users/me:', dbError);
-      
-      // Fall back to just returning the token info
-      return NextResponse.json({
-        userId: user.userId,
-        email: null,
-        timestamp: user.timestamp,
-        exp: user.exp
-      });
+    // Check cache first
+    const cacheKey = user.userId;
+    const cachedData = cache.get(cacheKey);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
+      console.log('Returning cached user data for:', user.userId);
+      return NextResponse.json(cachedData.data);
     }
+    
+    console.log('Fetching user data for userId:', user.userId);
+    
+    // Simulated user data - replace with your actual data fetching
+    const userData = {
+      id: user.userId,
+      email: user.email || 'user@example.com',
+      name: 'Admin User',
+      role: 'admin',
+      permissions: ['read', 'write', 'delete']
+    };
+    
+    // Update cache
+    cache.set(cacheKey, { data: userData, timestamp: now });
+    
+    return NextResponse.json(userData);
   } catch (error) {
     console.error('Error in /api/users/me:', error);
     return NextResponse.json({ 
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

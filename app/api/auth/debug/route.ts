@@ -3,43 +3,46 @@ import { getCurrentUser } from '@/utils/sharedAuth';
 
 export async function GET(req: NextRequest) {
   try {
-    // Get current user info
+    // Get current authentication state
     const user = await getCurrentUser(req);
     
-    // Get cookie information
-    const cookieInfo = {
-      allCookies: Object.fromEntries(req.cookies.getAll().map(c => [c.name, c.value.substring(0, 20) + '...'])),
-      hasSharedAuth: req.cookies.has('shared_auth_token'),
-      hasSharedAuthSecure: req.cookies.has('shared_auth_token_secure'),
-      hasSharedAuthJs: req.cookies.has('shared_auth_token_js'),
-    };
+    // Get all cookies for debugging
+    const allCookies = req.cookies.getAll().map(c => ({
+      name: c.name,
+      value: c.value.substring(0, 10) + '...',
+      size: c.value.length
+    }));
     
-    // Parse auth header if present
-    let authHeader = null;
-    if (req.headers.get('authorization')) {
-      authHeader = req.headers.get('authorization')?.substring(0, 20) + '...';
-    }
+    // Get request info
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
     
+    // Return detailed debug info
     return NextResponse.json({
+      timestamp: new Date().toISOString(),
       authenticated: !!user,
       user: user ? {
         userId: user.userId,
-        email: user.email || undefined,
-        timestamp: user.timestamp,
-        exp: user.exp,
+        hasEmail: !!user.email,
       } : null,
-      cookies: cookieInfo,
-      headers: {
-        userAgent: req.headers.get('user-agent'),
-        hasAuth: !!req.headers.get('authorization'),
-        authHeader
+      cookies: {
+        count: allCookies.length,
+        details: allCookies,
+        hasSharedAuth: req.cookies.has('shared_auth_token'),
+        hasSharedAuthSecure: req.cookies.has('shared_auth_token_secure')
+      },
+      requestInfo: {
+        method: req.method,
+        url: req.url,
+        referrer: headers.referer || null,
+        userAgent: headers['user-agent'] || null
       }
     });
   } catch (error) {
-    console.error('Error in auth debug:', error);
     return NextResponse.json({ 
-      error: 'Error checking authentication',
-      message: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
   }
 }

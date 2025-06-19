@@ -13,8 +13,15 @@ export async function GET(req: NextRequest) {
 
     // Get returnUrl from parameters or default to admin
     const returnUrl = req.nextUrl.searchParams.get('returnUrl') || '/admin';
+
+    // Directly redirect with token in URL parameter for cross-domain scenarios
+    // This ensures the token is available even if cookies don't transfer
+    const targetUrl = new URL(returnUrl);
+    targetUrl.searchParams.set('token', token);
     
-    // HTML response with embedded script to set cookies reliably
+    console.log('Redirecting to target with token in URL:', targetUrl.toString());
+    
+    // Create HTML response with special handling for cross-origin issues
     const html = `
       <!DOCTYPE html>
       <html>
@@ -75,73 +82,39 @@ export async function GET(req: NextRequest) {
           <h1>Authentication Successful!</h1>
           <p>You've been successfully authenticated. Redirecting you to the admin dashboard...</p>
           <div class="loader"></div>
-          <p>Redirecting in <span id="countdown">3</span> seconds...</p>
+          <p>Redirecting in <span id="countdown">2</span> seconds...</p>
         </div>
         
         <script>
-          // Set multiple cookies to ensure at least one works
-          function setCookie(name, value, days) {
-            let expires = '';
-            if (days) {
-              const date = new Date();
-              date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-              expires = '; expires=' + date.toUTCString();
-            }
-            
-            // Standard cookie
-            document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
-            
-            // Try with SameSite=None for cross-domain
-            try {
-              document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/; SameSite=None; Secure';
-            } catch (e) {
-              console.error('Error setting SameSite=None cookie:', e);
-            }
-          }
-          
-          // Set the auth token in multiple places
+          // Set token in localStorage for persistent access
           const token = "${token}";
+          localStorage.setItem('auth_token', token);
           
-          // Set regular cookie
-          setCookie('shared_auth_token', token, 30); // 30 days
-          
-          // Also set a JS-only cookie as backup
-          setCookie('shared_auth_token_js', token, 30);
-          
-          // Store in localStorage as additional backup
+          // Also try to set cookies with various settings
           try {
-            localStorage.setItem('auth_token', token);
-            console.log('Auth token stored in localStorage');
-          } catch (e) {
-            console.error('Failed to store in localStorage:', e);
+            // Standard cookie
+            document.cookie = "shared_auth_token=" + token + "; path=/; max-age=2592000"; // 30 days
+            
+            // Try SameSite=None cookie (requires Secure)
+            document.cookie = "shared_auth_token_secure=" + token + "; path=/; max-age=2592000; SameSite=None; Secure";
+          } catch(e) {
+            console.error("Error setting cookies:", e);
           }
           
-          // Countdown for redirection
-          let seconds = 3;
-          const countdown = document.getElementById('countdown');
-          const interval = setInterval(() => {
-            seconds--;
-            countdown.textContent = seconds.toString();
-            if (seconds <= 0) {
-              clearInterval(interval);
-              // Add token as URL parameter as final fallback
-              window.location.href = "${returnUrl}?token=${token}";
-            }
-          }, 1000);
+          // Direct navigation with the token in URL
+          setTimeout(() => {
+            window.location.href = "${targetUrl.toString()}";
+          }, 2000);
         </script>
       </body>
       </html>
     `;
     
-    // Return the HTML page with the embedded script
     return new NextResponse(html, {
       headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        // Set cookies in response headers as well
-        'Set-Cookie': [
-          `shared_auth_token=${token}; Path=/; Max-Age=${60*60*24*30}; SameSite=None; Secure`,
-          `shared_auth_token_secure=${token}; Path=/; Max-Age=${60*60*24*30}; HttpOnly; SameSite=None; Secure`
-        ].join(', ')
+        'Content-Type': 'text/html',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': 'true',
       }
     });
   } catch (error) {

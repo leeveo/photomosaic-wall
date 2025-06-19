@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
@@ -71,6 +71,9 @@ export default function AdminPage() {
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string>('')
+  
+  // Add this ref at the component level, NOT inside a useEffect
+  const isCheckingAuthRef = useRef(false);
 
   // Remove unused state variables
   // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
@@ -629,6 +632,7 @@ export default function AdminPage() {
                             Galerie
                           </span>
                         </button>
+                        {/* Photobooth button */}
                         <a
                           href={`/photo?id=${project.slug}`}
                           target="_blank"
@@ -638,7 +642,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
                             </svg>
                             Photobooth
                           </span>
@@ -775,7 +779,7 @@ export default function AdminPage() {
     );
   }
 
-  // Replace the useEffect for authentication with this more robust version
+  // Replace the useEffect for authentication with this fixed version
   useEffect(() => {
     function getCookieValue(name: string): string | null {
       const value = `; ${document.cookie}`;
@@ -787,19 +791,19 @@ export default function AdminPage() {
     function checkAuth(): boolean {
       console.log('Admin Page: Checking authentication...');
       
-      // Check URL parameters first (for initial navigation)
+      // IMPORTANT: Check URL parameters first (highest priority)
       const urlParams = new URLSearchParams(window.location.search);
       const tokenParam = urlParams.get('token');
       if (tokenParam) {
-        console.log('Found token in URL parameters, setting cookie');
+        console.log('Found token in URL parameters, setting cookie and localStorage');
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('auth_token', tokenParam);
         
         // Set cookie from URL parameter
         document.cookie = `shared_auth_token=${tokenParam}; path=/; max-age=${60*60*24*30}`;
         
-        // Store in localStorage too
-        localStorage.setItem('auth_token', tokenParam);
-        
-        // Remove token from URL
+        // Remove token from URL for security
         const url = new URL(window.location.href);
         url.searchParams.delete('token');
         window.history.replaceState({}, document.title, url.toString());
@@ -807,77 +811,82 @@ export default function AdminPage() {
         return true;
       }
       
-      // Check for cookie
+      // Check for cookie or localStorage
       const authCookie = getCookieValue('shared_auth_token') || 
                       getCookieValue('shared_auth_token_js') || 
                       getCookieValue('shared_auth_token_secure');
-    
-      if (authCookie) {
-        console.log('Auth cookie found, ensuring it is stored in all locations');
-        
-        // Store in all possible locations
-        document.cookie = `shared_auth_token=${authCookie}; path=/; max-age=${60*60*24*30}`;
-        localStorage.setItem('auth_token', authCookie);
-        
-        return true;
-      }
       
-      // Try localStorage as fallback
       const storedToken = localStorage.getItem('auth_token');
-      if (storedToken) {
-        console.log('No cookie found, but token exists in localStorage, setting cookie');
-        document.cookie = `shared_auth_token=${storedToken}; path=/; max-age=${60*60*24*30}`;
+      
+      if (authCookie || storedToken) {
+        // We have at least one source of authentication, use it
+        const token = authCookie || storedToken;
+        
+        if (token) {
+          // Store in all possible locations for consistency
+          document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+          localStorage.setItem('auth_token', token);
+        }
+        
         return true;
       }
       
-      // No authentication found
-      console.log('No authentication found in any storage location');
       return false;
     }
     
-    // Run the authentication check
-    if (!checkAuth()) {
-      // Check with the server first
-      fetch('/api/auth/status')
-        .then(res => res.json())
-        .then(data => {
-          console.log('Server auth status:', data);
-          
-          if (data.authenticated) {
-            console.log('Server reports we are authenticated, refreshing page');
-            window.location.reload();
-            return;
-          }
-          
-          // Show login prompt
-          const shouldLogin = window.confirm(
-            'Vous devez vous connecter pour accéder à l\'administration. Aller à la page de connexion?'
-          );
-          
-          if (shouldLogin) {
-            const returnUrl = encodeURIComponent(window.location.href);
-            const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
-            const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
-            
-            console.log('Redirecting to:', loginUrl);
-            window.location.href = loginUrl;
-          }
-        })
-        .catch(err => {
-          console.error('Error checking auth status:', err);
-        });
-    } else {
-      // Set up periodic cookie refresh
-      const refreshInterval = setInterval(() => {
-        const token = getCookieValue('shared_auth_token') || localStorage.getItem('auth_token');
-        if (token) {
-          document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
-          console.log('Auth cookie refreshed');
-        }
-      }, 10 * 60 * 1000); // Every 10 minutes
+    // Don't use the ref inside this effect, just use a normal local variable
+    if (!isCheckingAuthRef.current) {
+      isCheckingAuthRef.current = true;
       
-      return () => clearInterval(refreshInterval);
+      if (!checkAuth()) {
+        // We're not authenticated locally, check with server once
+        console.log('No local auth found, checking with server...');
+        
+        fetch('/api/auth/status')
+          .then(res => res.json())
+          .then(data => {
+            console.log('Server auth status:', data);
+            
+            if (data.authenticated) {
+              console.log('Server says we are authenticated, will not redirect');
+              return;
+            }
+            
+            // Only redirect if we're definitely not authenticated
+            const shouldLogin = window.confirm(
+              'Vous devez vous connecter pour accéder à l\'administration. Aller à la page de connexion?'
+            );
+            
+            if (shouldLogin) {
+              const returnUrl = encodeURIComponent(window.location.href);
+              const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
+              const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
+              
+              console.log('Redirecting to:', loginUrl);
+              window.location.href = loginUrl;
+            }
+          })
+          .catch(err => {
+            console.error('Error checking auth status:', err);
+          })
+          .finally(() => {
+            isCheckingAuthRef.current = false;
+          });
+      } else {
+        isCheckingAuthRef.current = false;
+      }
     }
+    
+    // Set up periodic cookie refresh with a longer interval (30 minutes)
+    const refreshInterval = setInterval(() => {
+      const token = getCookieValue('shared_auth_token') || localStorage.getItem('auth_token');
+      if (token) {
+        document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+        console.log('Auth cookie refreshed silently');
+      }
+    }, 30 * 60 * 1000); // Every 30 minutes instead of 10
+    
+    return () => clearInterval(refreshInterval);
   }, []);
 
   return (

@@ -1,127 +1,126 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifySharedToken } from '@/utils/sharedAuth';
 
-// Create a Supabase client with the service role key to access admin_users
+// Créer une connexion directe à Supabase avec les variables d'environnement
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Extract the token from cookies
-    const token = req.cookies.get('shared_auth_token')?.value;
+    // Récupérer le token depuis les cookies
+    const token = request.cookies.get('shared_auth_token')?.value;
     
     if (!token) {
-      console.log('No auth token found in cookies');
+      console.log('Aucun token d\'authentification trouvé');
       return NextResponse.json({
-        error: 'Unauthorized',
-        authenticated: false
-      }, { status: 401 });
+        error: 'Non authentifié',
+        email: 'user@example.com'
+      });
     }
     
-    // Verify the token to get the user ID
-    const user = await verifySharedToken(token);
+    // Extraire l'ID utilisateur du token
+    let userId = null;
     
-    if (!user || !user.userId) {
-      console.log('Invalid token or missing userId');
-      return NextResponse.json({
-        error: 'Invalid token',
-        authenticated: false
-      }, { status: 401 });
+    try {
+      // Vérifier si c'est un token JWT (contient des points)
+      if (token.includes('.') && token.split('.').length === 3) {
+        // Token JWT - extraire le payload
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub || payload.userId;
+        console.log('ID utilisateur extrait du JWT:', userId);
+      } else {
+        // Essayer de décoder comme base64
+        const decoded = atob(token);
+        const userData = JSON.parse(decoded);
+        userId = userData.userId;
+        console.log('ID utilisateur extrait du base64:', userId);
+      }
+    } catch (e) {
+      console.error('Erreur lors de l\'extraction des données du token:', e);
     }
     
-    console.log('Looking up user in admin_users table with ID:', user.userId);
+    if (!userId) {
+      console.log('Impossible d\'extraire l\'ID utilisateur du token');
+      return NextResponse.json({
+        error: 'Token invalide',
+        email: 'user@example.com'
+      });
+    }
     
-    // Fixed: Use the correct table name and query
-    const { data: adminUser, error } = await supabase
+    // Utiliser la clé anonyme d'abord (plus sûr pour l'API publique)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    
+    console.log('Recherche de l\'utilisateur dans admin_users avec ID:', userId);
+    
+    // Requête directe à la table admin_users
+    const { data, error } = await supabase
       .from('admin_users')
-      .select('id, email, name, role')
-      .eq('id', user.userId)
+      .select('id, email, name')
+      .eq('id', userId)
       .single();
     
     if (error) {
-      console.error('Error querying admin_users table:', error);
+      console.error('Erreur lors de la requête à admin_users:', error);
       
-      // Try an alternative lookup by email if userId doesn't work
-      if (user.email) {
-        console.log('Trying alternative lookup by email:', user.email);
-        const { data: userByEmail, error: emailError } = await supabase
+      // Tenter une requête sans single() pour éviter l'erreur si plusieurs résultats
+      const { data: altData, error: altError } = await supabase
+        .from('admin_users')
+        .select('id, email, name')
+        .eq('id', userId);
+      
+      if (altError || !altData || altData.length === 0) {
+        console.log('Utilisateur non trouvé même avec requête alternative');
+        
+        // Consulter les utilisateurs disponibles pour le débogage
+        const { data: allUsers } = await supabase
           .from('admin_users')
-          .select('id, email, name, role')
-          .eq('email', user.email)
-          .single();
+          .select('id, email')
+          .limit(10);
           
-        if (!emailError && userByEmail) {
-          console.log('Found user by email:', userByEmail);
-          return NextResponse.json({
-            id: userByEmail.id,
-            email: userByEmail.email,
-            name: userByEmail.name || 'Admin User',
-            role: userByEmail.role || 'admin',
-            permissions: ['read', 'write', 'admin'],
-            source: 'database_email_lookup'
-          });
-        }
+        console.log('Utilisateurs disponibles:', allUsers);
+        
+        return NextResponse.json({
+          id: userId,
+          email: 'user@example.com',
+          error: altError ? altError.message : 'Utilisateur non trouvé',
+          availableUsers: allUsers?.map(u => ({ id: u.id, email: u.email }))
+        });
       }
       
-      // Debug: List all users in the admin_users table
-      const { data: allUsers } = await supabase
-        .from('admin_users')
-        .select('id, email')
-        .limit(10);
-        
-      console.log('Available users in admin_users table:', allUsers);
+      console.log('Utilisateur trouvé avec requête alternative:', altData[0]);
       
-      // Fallback to basic info from token
+      // Retourner le premier utilisateur trouvé
       return NextResponse.json({
-        id: user.userId,
-        email: user.email || 'user@example.com',
-        name: 'Admin User',
-        role: 'admin',
-        permissions: ['read', 'write', 'admin'],
-        source: 'token_fallback'
+        id: altData[0].id,
+        email: altData[0].email,
+        name: altData[0].name || 'Utilisateur Admin',
+        source: 'database_alt'
       });
     }
     
-    if (!adminUser) {
-      console.log('User not found in admin_users table:', user.userId);
-      
-      // Debug: Show list of users
-      const { data: allUsers } = await supabase
-        .from('admin_users')
-        .select('id, email')
-        .limit(10);
-        
-      console.log('Available users in admin_users table:', allUsers);
-      
+    if (!data) {
+      console.log('Utilisateur non trouvé dans la table admin_users');
       return NextResponse.json({
-        id: user.userId,
-        email: user.email || 'user@example.com',
-        name: 'Admin User',
-        role: 'admin',
-        permissions: ['read', 'write', 'admin'],
-        source: 'token_fallback'
+        id: userId,
+        email: 'user@example.com'
       });
     }
     
-    console.log('Found user in admin_users table:', adminUser);
+    console.log('Utilisateur trouvé dans admin_users:', data);
     
-    // Return user data from the database
+    // Retourner l'email de l'utilisateur depuis la base de données
     return NextResponse.json({
-      id: adminUser.id,
-      email: adminUser.email,
-      name: adminUser.name || 'Admin User',
-      role: adminUser.role || 'admin',
-      permissions: ['read', 'write', 'admin'],
+      id: data.id,
+      email: data.email,
+      name: data.name || 'Utilisateur Admin',
       source: 'database'
     });
     
   } catch (error) {
-    console.error('Error in /api/users/me:', error instanceof Error ? error.message : String(error));
+    console.error('Erreur dans /api/users/me:', error);
     return NextResponse.json({
-      error: 'Internal Server Error',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      error: error instanceof Error ? error.message : 'Erreur inconnue',
+      email: 'error@example.com'
+    });
   }
 }

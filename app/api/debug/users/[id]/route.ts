@@ -7,11 +7,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const userId = params.id;
+    const userId = context.params.id;
     
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });

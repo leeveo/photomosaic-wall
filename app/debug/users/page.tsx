@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-// Create a client with the anon key for debugging
+// Créer un client avec la clé anon pour le débogage
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -12,20 +12,22 @@ export default function DebugUsersPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userIdToCheck, setUserIdToCheck] = useState('');
-  const [userCheckResult, setUserCheckResult] = useState<any>(null);
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [apiResponse, setApiResponse] = useState<any>(null);
   
   useEffect(() => {
     async function fetchUsers() {
       try {
         setLoading(true);
         
-        // Try to get current user token ID
+        // Récupérer le token actuel
         const token = localStorage.getItem('auth_token') || '';
         if (token) {
+          setCurrentToken(token.substring(0, 15) + '...');
+          
           try {
-            // For base64 tokens
+            // Pour les tokens base64
             if (!token.includes('.')) {
               const decoded = atob(token);
               const userData = JSON.parse(decoded);
@@ -33,40 +35,48 @@ export default function DebugUsersPage() {
                 setCurrentUserId(userData.userId);
               }
             } 
-            // For JWT tokens
+            // Pour les tokens JWT
             else if (token.split('.').length === 3) {
               const payload = JSON.parse(atob(token.split('.')[1]));
               if (payload.sub) {
                 setCurrentUserId(payload.sub);
+              } else if (payload.userId) {
+                setCurrentUserId(payload.userId);
               }
             }
           } catch (e) {
-            console.error('Error parsing token:', e);
+            console.error('Erreur lors de l\'analyse du token:', e);
           }
         }
         
-        // Try to list users via the API first (preferred approach)
-        const apiResponse = await fetch('/api/debug/users');
-        if (apiResponse.ok) {
-          const data = await apiResponse.json();
+        // Essayer d'obtenir les utilisateurs via l'API
+        const apiResponseData = await fetch('/api/users/me');
+        if (apiResponseData.ok) {
+          const data = await apiResponseData.json();
+          setApiResponse(data);
+        }
+        
+        // Essayer de lister les utilisateurs via l'API
+        const usersResponse = await fetch('/api/debug/users');
+        if (usersResponse.ok) {
+          const data = await usersResponse.json();
           setUsers(data.users || []);
           setLoading(false);
           return;
         }
         
-        // Fallback to direct Supabase query if API fails
-        // This will only work with public data due to anon key limitations
+        // Fallback vers une requête Supabase directe
         const { data, error } = await supabase
           .from('admin_users')
-          .select('id, email, created_at, name')
+          .select('*')
           .order('created_at', { ascending: false });
           
         if (error) throw error;
         
         setUsers(data || []);
       } catch (err) {
-        console.error('Error fetching users:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Erreur lors de la récupération des utilisateurs:', err);
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
       } finally {
         setLoading(false);
       }
@@ -75,97 +85,45 @@ export default function DebugUsersPage() {
     fetchUsers();
   }, []);
   
-  async function checkUserById() {
-    if (!userIdToCheck) return;
-    
-    try {
-      setUserCheckResult({ loading: true });
-      
-      // Try API endpoint first
-      const apiResponse = await fetch(`/api/debug/users/${userIdToCheck}`);
-      if (apiResponse.ok) {
-        const data = await apiResponse.json();
-        setUserCheckResult({ data, source: 'api' });
-        return;
-      }
-      
-      // Fallback to direct query
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('*')
-        .eq('id', userIdToCheck)
-        .single();
-        
-      if (error) throw error;
-      
-      setUserCheckResult({ data, source: 'direct' });
-    } catch (err) {
-      setUserCheckResult({ 
-        error: err instanceof Error ? err.message : 'Unknown error',
-        source: 'error'
-      });
-    }
-  }
-  
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Admin Users Debug</h1>
+      <h1 className="text-2xl font-bold mb-6">Débogage des utilisateurs admin</h1>
       
       {currentUserId && (
         <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h2 className="text-lg font-semibold mb-2">Current User</h2>
-          <p><strong>User ID:</strong> {currentUserId}</p>
+          <h2 className="text-lg font-semibold mb-2">Utilisateur actuel</h2>
+          <p><strong>Token (partiel):</strong> {currentToken}</p>
+          <p><strong>ID Utilisateur:</strong> {currentUserId}</p>
           <p className="text-sm text-gray-500 mt-2">
-            This is the ID extracted from your current authentication token.
+            Il s'agit de l'ID extrait de votre token d'authentification actuel.
           </p>
         </div>
       )}
       
-      <div className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-        <h2 className="text-lg font-semibold mb-2">Check User by ID</h2>
-        <div className="flex gap-2 mb-4">
-          <input
-            type="text"
-            value={userIdToCheck}
-            onChange={(e) => setUserIdToCheck(e.target.value)}
-            placeholder="Enter user ID to check"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded"
-          />
-          <button
-            onClick={checkUserById}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Check
-          </button>
+      {apiResponse && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Réponse de l'API /api/users/me</h2>
+          <pre className="bg-white p-3 rounded text-sm overflow-auto">{JSON.stringify(apiResponse, null, 2)}</pre>
         </div>
-        
-        {userCheckResult && (
-          <div className="mt-4 p-4 bg-white border border-gray-300 rounded-lg overflow-auto">
-            <h3 className="font-medium mb-2">Result:</h3>
-            <pre className="text-xs bg-gray-50 p-3 rounded">
-              {JSON.stringify(userCheckResult, null, 2)}
-            </pre>
-          </div>
-        )}
-      </div>
+      )}
       
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold">Users in admin_users Table</h2>
+          <h2 className="text-lg font-semibold">Utilisateurs dans la table admin_users</h2>
         </div>
         
         {loading ? (
-          <div className="p-6 text-center">Loading users...</div>
+          <div className="p-6 text-center">Chargement des utilisateurs...</div>
         ) : error ? (
           <div className="p-6 text-center text-red-500">
-            Error: {error}
+            Erreur: {error}
             <p className="mt-2 text-sm text-gray-500">
-              Note: This may fail if you don't have permission to access the admin_users table directly.
+              Note: Cela peut échouer si vous n'avez pas les permissions pour accéder directement à la table admin_users.
             </p>
           </div>
         ) : users.length === 0 ? (
           <div className="p-6 text-center">
-            No users found in the admin_users table.
+            Aucun utilisateur trouvé dans la table admin_users.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -174,8 +132,9 @@ export default function DebugUsersPage() {
                 <tr className="bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Créé le</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -183,10 +142,11 @@ export default function DebugUsersPage() {
                   <tr key={user.id} className={currentUserId === user.id ? 'bg-blue-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
                       {user.id}
-                      {currentUserId === user.id && <span className="ml-2 text-xs text-blue-500">(current)</span>}
+                      {currentUserId === user.id && <span className="ml-2 text-xs text-blue-500">(actuel)</span>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.name || '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.created_at ? new Date(user.created_at).toLocaleString() : '-'}
                     </td>
@@ -196,6 +156,16 @@ export default function DebugUsersPage() {
             </table>
           </div>
         )}
+      </div>
+      
+      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h3 className="font-medium mb-2">Instructions de débogage:</h3>
+        <ol className="list-decimal pl-5 space-y-2">
+          <li>Vérifiez que votre token d'authentification contient bien un ID utilisateur valide</li>
+          <li>Vérifiez que cet ID existe dans la table admin_users</li>
+          <li>Vérifiez que le SUPABASE_SERVICE_ROLE_KEY dans .env.local contient "role" et non "rose"</li>
+          <li>Vérifiez la réponse de l'API /api/users/me pour voir les erreurs potentielles</li>
+        </ol>
       </div>
     </div>
   );

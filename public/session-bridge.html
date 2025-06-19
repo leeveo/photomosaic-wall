@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Session Bridge</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #3949ab;
+      margin-top: 0;
+    }
+    .token-area {
+      margin: 15px 0;
+      padding: 10px;
+      background: #f0f4ff;
+      border-radius: 4px;
+      word-break: break-all;
+      max-height: 100px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    button {
+      padding: 10px 15px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #3c3494;
+    }
+    .success {
+      color: #059669;
+      font-weight: 500;
+    }
+    .error {
+      color: #dc2626;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Connexion partagée</h1>
+    <p>Cette page permet de partager votre connexion entre les deux applications.</p>
+    
+    <div id="status"></div>
+    
+    <div id="token-container" style="display:none;">
+      <p>Token d'authentification détecté:</p>
+      <div class="token-area" id="token-display"></div>
+    </div>
+    
+    <button id="share-btn">Partager ma session avec Mosaic</button>
+    <p id="result"></p>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const statusEl = document.getElementById('status');
+      const tokenContainer = document.getElementById('token-container');
+      const tokenDisplay = document.getElementById('token-display');
+      const shareBtn = document.getElementById('share-btn');
+      const resultEl = document.getElementById('result');
+      
+      // Check if user is logged in
+      function checkLogin() {
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('shared_auth_token');
+        
+        if (token) {
+          statusEl.innerHTML = '<p class="success">✅ Vous êtes connecté sur l\'application principale.</p>';
+          tokenContainer.style.display = 'block';
+          
+          // Display truncated token
+          if (token.length > 30) {
+            tokenDisplay.textContent = token.substring(0, 15) + '...' + token.substring(token.length - 15);
+          } else {
+            tokenDisplay.textContent = token;
+          }
+          
+          return token;
+        } else {
+          statusEl.innerHTML = '<p class="error">❌ Vous n\'êtes pas connecté sur l\'application principale.</p>';
+          tokenContainer.style.display = 'none';
+          return null;
+        }
+      }
+      
+      // First check on page load
+      const initialToken = checkLogin();
+      
+      // Function to share token with Mosaic
+      function shareWithMosaic() {
+        const token = localStorage.getItem('auth_token') || localStorage.getItem('shared_auth_token');
+        
+        if (!token) {
+          resultEl.innerHTML = '<p class="error">Aucun token trouvé. Veuillez vous connecter d\'abord.</p>';
+          return;
+        }
+        
+        try {
+          // Option 1: Direct navigation with token in URL
+          const mosaicUrl = new URL('http://localhost:3001/admin');
+          mosaicUrl.searchParams.set('token', token);
+          mosaicUrl.searchParams.set('bypass', 'true');
+          
+          resultEl.innerHTML = '<p class="success">Redirection vers Mosaic avec votre session...</p>';
+          
+          // Redirect after a short delay
+          setTimeout(() => {
+            window.location.href = mosaicUrl.toString();
+          }, 1000);
+          
+        } catch (error) {
+          resultEl.innerHTML = '<p class="error">Erreur: ' + error.message + '</p>';
+        }
+      }
+      
+      // Share button click handler
+      shareBtn.addEventListener('click', shareWithMosaic);
+    });
+  </script>
+</body>
+</html>

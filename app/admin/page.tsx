@@ -91,13 +91,15 @@ export default function AdminPage() {
       // Store in localStorage
       localStorage.setItem('auth_token', token);
       
-      // Set cookie
+      // Set cookie with multiple formats for maximum compatibility
       document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+      document.cookie = `admin_session=${token}; path=/; max-age=${60*60*24*30}`;
       document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
       
       // Clean up URL by removing the token (security best practice)
       const url = new URL(window.location.href);
       url.searchParams.delete('token');
+      url.searchParams.delete('bypass');
       window.history.replaceState({}, document.title, url.toString());
     }
   }, []);

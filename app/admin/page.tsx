@@ -123,7 +123,7 @@ export default function AdminPage() {
     // Fetch user info including email from database
     const fetchUserInfo = async () => {
       try {
-        // First try to get basic info from cookie
+        // Function to decode token from cookie
         const getCookieValue = (name: string) => {
           try {
             const value = `; ${document.cookie}`;
@@ -131,6 +131,15 @@ export default function AdminPage() {
             if (parts.length === 2) {
               const cookieValue = parts.pop()?.split(';').shift() || '';
               try {
+                // Check if it's a JWT token (contains dots)
+                if (cookieValue.includes('.') && cookieValue.split('.').length === 3) {
+                  // JWT token - try to extract email from payload
+                  const payload = JSON.parse(atob(cookieValue.split('.')[1]));
+                  if (payload.email) {
+                    return { email: payload.email, userId: payload.sub || payload.userId };
+                  }
+                }
+                
                 // Try to decode as base64
                 const decoded = atob(cookieValue);
                 const userData = JSON.parse(decoded);
@@ -147,35 +156,35 @@ export default function AdminPage() {
         };
         
         const userData = getCookieValue('shared_auth_token');
+        console.log('User data from cookie:', userData);
         
-        // Set a default display value while we fetch from API
-        if (userData?.userId) {
+        // Set default display
+        if (userData?.email) {
+          setUserEmail(userData.email);
+        } else if (userData?.userId) {
           setUserEmail(`ID: ${userData.userId.substring(0, 8)}...`);
         } else {
           setUserEmail('Utilisateur');
         }
         
-        // Now fetch complete user info from API
-        try {
-          const response = await fetch('/api/users/me');
-          if (response.ok) {
-            const userInfo = await response.json();
-            console.log('User info from API:', userInfo);
-            
-            // If we have an email from the database, use it
-            if (userInfo.email) {
-              setUserEmail(userInfo.email);
+        // Try to get more info from API if needed
+        if (!userData?.email) {
+          try {
+            const response = await fetch('/api/users/me');
+            if (response.ok) {
+              const userInfo = await response.json();
+              console.log('User info from API:', userInfo);
+              
+              if (userInfo.email) {
+                setUserEmail(userInfo.email);
+              }
             }
-          } else {
-            console.warn('Failed to fetch user info from API:', response.status);
+          } catch (apiError) {
+            console.error('Error fetching from API:', apiError);
           }
-        } catch (apiError) {
-          // If API fails, we already have a fallback from the cookie
-          console.error('Error fetching from API:', apiError);
         }
       } catch (error) {
         console.error('Error in fetchUserInfo:', error);
-        // Use a generic user display if everything fails
         setUserEmail('Utilisateur');
       }
     };
@@ -765,6 +774,62 @@ export default function AdminPage() {
       </div>
     );
   }
+
+  // Add this helper function at the top of the file
+  function getCookieClient(name: string) {
+    if (typeof document === 'undefined') return null;
+    
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+      return parts.pop()?.split(';').shift() || null;
+    }
+    return null;
+  }
+
+  // Replace the forceAuthentication function with this version
+  function forceAuthentication() {
+    // Only redirect if cookie is actually missing
+    if (typeof window !== 'undefined') {
+      const cookie = getCookieClient('shared_auth_token');
+      
+      // Double check to avoid redirect loops
+      if (!cookie) {
+        const returnUrl = encodeURIComponent(window.location.href);
+        const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
+        const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&shared=true&callbackUrl=${callbackUrl}`;
+        
+        console.log('Redirecting to login from client side:', loginUrl);
+        window.location.href = loginUrl;
+      } else {
+        console.log('Cookie is present, no redirection needed');
+      }
+    }
+  }
+
+  // Replace the useEffect with a better cookie detection
+  useEffect(() => {
+    // More robust cookie check that works with multiple cookie formats
+    const hasCookie = document.cookie.split(';').some(item => {
+      return item.trim().startsWith('shared_auth_token=');
+    });
+    
+    if (!hasCookie) {
+      console.log('No auth cookie found in document.cookie, will redirect');
+      // Give a small delay to avoid redirect loops
+      const checkToken = setTimeout(() => {
+        // Check again to make sure it's still missing
+        const cookieNow = getCookieClient('shared_auth_token');
+        if (!cookieNow) {
+          forceAuthentication();
+        }
+      }, 1500);
+      
+      return () => clearTimeout(checkToken);
+    } else {
+      console.log('Auth cookie found in document.cookie, no redirect needed');
+    }
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-100">

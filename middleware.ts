@@ -26,22 +26,14 @@ export async function middleware(req: NextRequest) {
           const originUrl = new URL(req.url).origin;
           const returnUrl = `${originUrl}/admin`;
           
-          // Get the login URL base from env or use default
-          const loginUrlBase = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login';
+          // Create the login URL - using photobooth app login
+          const loginUrlBase = 'https://photobooth.waibooth.app/photobooth-ia/admin/login';
           
-          // Handle the case where login URL already has query parameters
-          let loginUrlString = loginUrlBase;
-          const hasQueryParams = loginUrlBase.includes('?');
+          // Build the URL with correct parameters
+          const loginUrl = `${loginUrlBase}?returnUrl=${encodeURIComponent(returnUrl)}&shared=true&callbackUrl=${encodeURIComponent(`${originUrl}/api/auth/callback`)}`;
           
-          // Add returnUrl param using the appropriate separator
-          if (hasQueryParams) {
-            loginUrlString += `&returnUrl=${encodeURIComponent(returnUrl)}`;
-          } else {
-            loginUrlString += `?returnUrl=${encodeURIComponent(returnUrl)}`;
-          }
-          
-          console.log('Redirecting to login:', loginUrlString);
-          return NextResponse.redirect(loginUrlString);
+          console.log('Redirecting to login from middleware:', loginUrl);
+          return NextResponse.redirect(loginUrl);
         }
         
         // User is authenticated, let them continue
@@ -49,7 +41,8 @@ export async function middleware(req: NextRequest) {
       } catch (authError) {
         console.error('Authentication error in middleware:', authError);
         // If auth check fails, redirect to login as a fallback
-        return NextResponse.redirect(process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login');
+        const originUrl = new URL(req.url).origin;
+        return NextResponse.redirect(`https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${encodeURIComponent(`${originUrl}/admin`)}`);
       }
     }
     

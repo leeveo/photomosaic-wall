@@ -80,7 +80,14 @@ export async function getCurrentUser(req: NextRequest): Promise<UserPayload | nu
   try {
     // Handle both Promise and non-Promise cookies (Vercel vs local)
     const cookies = req.cookies instanceof Promise ? await req.cookies : req.cookies;
-    const token = cookies.get?.(COOKIE_NAME)?.value;
+    
+    // First try the secure cookie
+    let token = cookies.get?.('shared_auth_token_secure')?.value;
+    
+    // If not found, try the regular cookie
+    if (!token) {
+      token = cookies.get?.('shared_auth_token')?.value;
+    }
     
     if (!token) {
       console.log('No auth token found in cookies');
@@ -99,12 +106,29 @@ export async function getCurrentUser(req: NextRequest): Promise<UserPayload | nu
 export function setSharedAuthCookie(response: NextResponse, token: string): NextResponse {
   console.log('Setting shared auth cookie, token length:', token.length);
   
-  // Sanitize token - ensure it's a valid JWT format (header.payload.signature)
+  // Accept both JWT and Base64 token formats
+  // For Base64 tokens, make sure we verify basic structure
   if (!token.includes('.') || token.split('.').length !== 3) {
-    console.error('Invalid token format, not setting cookie');
-    return response;
+    try {
+      // For non-JWT tokens, verify it can be decoded as base64
+      const decoded = Buffer.from(token, 'base64').toString('utf-8');
+      
+      // Check if it's valid JSON with userId
+      const parsed = JSON.parse(decoded);
+      if (!parsed.userId) {
+        console.error('Invalid token content (missing userId), not setting cookie');
+        return response;
+      }
+      
+      // Token seems valid, set cookie
+      console.log('Setting cookie with valid base64 token');
+    } catch (e) {
+      console.error('Invalid token format, not setting cookie:', e);
+      return response;
+    }
   }
   
+  // Set the cookie with a long expiration time
   response.cookies.set({
     name: COOKIE_NAME,
     value: token,
@@ -112,7 +136,7 @@ export function setSharedAuthCookie(response: NextResponse, token: string): Next
     path: '/',
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 8, // 8 hours in seconds
+    maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
   });
   
   return response;

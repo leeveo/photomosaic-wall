@@ -8,6 +8,8 @@ const COOKIE_NAME = 'shared_auth_token';
 interface UserPayload {
   userId: string;
   email?: string;
+  timestamp?: number;
+  exp?: number;
 }
 
 // Verify a shared token
@@ -39,6 +41,10 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
           
           // Check if it has expected fields
           if (parsedUser.userId) {
+            console.log('Valid user found in token:', {
+              userId: parsedUser.userId,
+              hasEmail: !!parsedUser.email
+            });
             return parsedUser as UserPayload;
           }
           console.log('Decoded token missing required fields');

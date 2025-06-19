@@ -10,6 +10,7 @@ import PhotoDonutChart from '@/components/PhotoDonutChart'
 import FlyerGenerator from '@/components/FlyerGenerator'
 import PhotoBoothCustomizer from '@/components/PhotoBoothCustomizer'
 import PhotosTab from '@/components/PhotosTab'
+import UserProfileMenu from '@/components/UserProfileMenu'
 import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit } from 'react-icons/fi'
 import Link from 'next/link'
 import { useQRCode } from 'next-qrcode'
@@ -69,6 +70,7 @@ export default function AdminPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [userEmail, setUserEmail] = useState<string>('')
 
   // Remove unused state variables
   // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
@@ -116,6 +118,57 @@ export default function AdminPage() {
 
     fetchAll()
   }, [])
+
+  useEffect(() => {
+    // Fetch user info including email from database
+    const fetchUserInfo = async () => {
+      try {
+        // First try to get basic info from cookie
+        const getCookieValue = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) {
+            const cookieValue = parts.pop()?.split(';').shift() || '';
+            try {
+              // Try to decode as base64
+              const decoded = atob(cookieValue);
+              const userData = JSON.parse(decoded);
+              return userData;
+            } catch (e) {
+              console.error('Error parsing cookie:', e);
+              return null;
+            }
+          }
+          return null;
+        };
+        
+        const userData = getCookieValue('shared_auth_token');
+        
+        // Set a default display value while we fetch from API
+        if (userData?.userId) {
+          setUserEmail(`ID: ${userData.userId.substring(0, 8)}...`);
+        } else {
+          setUserEmail('Utilisateur');
+        }
+        
+        // Now fetch complete user info from API
+        const response = await fetch('/api/users/me');
+        if (response.ok) {
+          const userInfo = await response.json();
+          console.log('User info from API:', userInfo);
+          
+          // If we have an email from the database, use it
+          if (userInfo.email) {
+            setUserEmail(userInfo.email);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+    
+    fetchUserInfo();
+  }, []);
 
   const deleteTile = async (tileId: string, imageUrl: string) => {
     await supabase.from('tiles').delete().eq('id', tileId)
@@ -768,32 +821,40 @@ export default function AdminPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <header className="bg-white shadow pl-4 lg:pl-0 sticky top-0 z-10">
-          <div className="px-6 py-4 flex items-center">
+          <div className="px-6 py-4 flex items-center justify-between">
             {/* Mobile hamburger menu button */}
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="mr-4 lg:hidden"
-              aria-label="Toggle menu"
-            >
-              <svg
-                className="h-6 w-6 text-gray-600"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            <div className="flex items-center">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="mr-4 lg:hidden"
+                aria-label="Toggle menu"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            </button>
-            <h2 className="font-semibold text-xl text-gray-800">
-              Dashboard
-            </h2>
+                <svg
+                  className="h-6 w-6 text-gray-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+              <h2 className="font-semibold text-xl text-gray-800">
+                Dashboard
+              </h2>
+            </div>
+            
+            {/* User Profile Menu */}
+            <div>
+              <UserProfileMenu email={userEmail} />
+            </div>
           </div>
         </header>
+        
         <main className="p-6">
           {activeTab === 'projects' ? renderDashboard() : renderContent()}
         </main>

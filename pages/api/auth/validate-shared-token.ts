@@ -1,36 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { verifySharedToken } from '../../../utils/sharedAuth';
+import { validateSharedToken } from '../../../utils/sharedAuth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Vérifier si la méthode est POST
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée' });
+    return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
   try {
     const { token } = req.body;
-    
+
     if (!token) {
-      return res.status(400).json({ error: 'Token manquant' });
+      return res.status(400).json({ message: 'Token is required' });
     }
-    
-    // Vérifier le token et récupérer l'utilisateur
-    const user = await verifySharedToken(token);
-    
+
+    // Valider le token
+    const user = await validateSharedToken(token);
+
     if (!user) {
-      return res.status(401).json({ error: 'Token invalide ou expiré' });
+      return res.status(401).json({ message: 'Invalid token' });
     }
-    
-    // Retourner les informations de l'utilisateur (sans données sensibles)
-    return res.status(200).json({ 
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name || user.email.split('@')[0],
-        role: user.role
-      }
-    });
+
+    // Si le token est valide, retourner les informations de l'utilisateur
+    return res.status(200).json({ user });
   } catch (error) {
-    console.error('Erreur validation token:', error);
-    return res.status(500).json({ error: 'Erreur de validation du token' });
+    console.error('Error validating shared token:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }

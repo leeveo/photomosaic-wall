@@ -30,13 +30,20 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
 
 // Get the current user from the shared token cookie
 export async function getCurrentUser(req: NextRequest): Promise<UserPayload | null> {
-  const token = req.cookies.get(COOKIE_NAME)?.value;
-  
-  if (!token) {
+  try {
+    // Handle both Promise and non-Promise cookies (Vercel vs local)
+    const cookies = req.cookies instanceof Promise ? await req.cookies : req.cookies;
+    const token = cookies.get?.(COOKIE_NAME)?.value;
+    
+    if (!token) {
+      return null;
+    }
+    
+    return await verifySharedToken(token);
+  } catch (error) {
+    console.error('Error getting current user:', error);
     return null;
   }
-  
-  return await verifySharedToken(token);
 }
 
 // Set the shared auth cookie on a response

@@ -34,6 +34,9 @@ export function verifyToken(token: string): SharedAuthUser | null {
   }
 }
 
+// Alias pour verifyToken (utilisé dans certains fichiers)
+export const verifySharedToken = verifyToken;
+
 // Générer un token JWT pour un utilisateur
 export function generateToken(user: SharedAuthUser): string {
   const secret = process.env.SHARED_AUTH_SECRET;
@@ -114,4 +117,32 @@ export async function getSessionUser(request: NextRequest): Promise<SharedAuthUs
 // Fonction pour les endpoints de validation de token
 export async function validateSharedToken(token: string): Promise<SharedAuthUser | null> {
   return verifyToken(token);
+}
+
+// Fonction pour définir le cookie d'authentification côté serveur
+export function setAuthCookie(token: string, response: NextResponse): NextResponse {
+  // Configurer les options du cookie
+  const cookieOptions = {
+    path: '/',
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 7 * 24 * 60 * 60, // 7 jours en secondes
+  };
+
+  // Définir le cookie dans la réponse
+  response.cookies.set('shared_auth_token', token, cookieOptions);
+  return response;
+}
+
+// Fonction pour définir le cookie pour les routes API
+export function setAuthApiCookie(res: NextApiResponse, token: string): void {
+  // Configurer les options du cookie
+  res.setHeader('Set-Cookie', `shared_auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+}
+
+// Fonction pour supprimer le cookie d'authentification côté serveur
+export function removeAuthCookie(response: NextResponse): NextResponse {
+  response.cookies.delete('shared_auth_token');
+  return response;
 }

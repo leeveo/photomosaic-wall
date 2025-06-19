@@ -5,29 +5,20 @@ export async function GET(request: NextRequest) {
   // Récupérer le token et l'URL de redirection depuis les paramètres
   const searchParams = request.nextUrl.searchParams;
   const token = searchParams.get('token');
-  const redirectTo = searchParams.get('redirectTo') || '/';
+  const redirectUrl = searchParams.get('redirect') || '/';
   
   console.log('Callback reçu avec token:', token ? 'présent' : 'absent');
-  console.log('Redirection vers:', redirectTo);
+  console.log('Redirection vers:', redirectUrl);
   
   // Vérifier si le token est présent
   if (!token) {
-    return NextResponse.redirect(
-      new URL('/?error=Authentification échouée - Token manquant', request.url)
-    );
+    // Rediriger vers la page de connexion si aucun token n'est fourni
+    return NextResponse.redirect(new URL('/login', request.url));
   }
+
+  // Créer une réponse de redirection
+  const response = NextResponse.redirect(new URL(redirectUrl, request.url));
   
-  try {
-    // Définir le cookie d'authentification
-    setAuthCookie(token);
-    console.log('Cookie auth_token défini avec succès');
-    
-    // Rediriger vers la page demandée
-    return NextResponse.redirect(new URL(redirectTo, request.url));
-  } catch (error) {
-    console.error('Erreur définition cookie:', error);
-    return NextResponse.redirect(
-      new URL('/?error=Erreur serveur lors de l\'authentification', request.url)
-    );
-  }
+  // Définir le cookie d'authentification
+  return setAuthCookie(token, response);
 }

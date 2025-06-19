@@ -56,6 +56,9 @@ export function generateToken(user: SharedAuthUser): string {
   );
 }
 
+// Alias pour generateToken (utilisé dans certains fichiers)
+export const generateAuthToken = generateToken;
+
 // Middleware pour routes d'API avec Next.js API Routes (pages/api)
 export function withAuth(
   handler: (req: NextApiRequest, res: NextApiResponse, user: SharedAuthUser) => Promise<void>
@@ -145,4 +148,16 @@ export function setAuthApiCookie(res: NextApiResponse, token: string): void {
 export function removeAuthCookie(response: NextResponse): NextResponse {
   response.cookies.delete('shared_auth_token');
   return response;
+}
+
+// Fonction pour obtenir l'utilisateur courant à partir des cookies
+export async function getCurrentUser(request: NextRequest): Promise<SharedAuthUser | null> {
+  const cookieStore = cookies();
+  const token = cookieStore.get('shared_auth_token')?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  return verifyToken(token);
 }

@@ -1,49 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateAuthToken, setAuthCookie } from '../../../../utils/sharedAuth';
+import { generateToken, setAuthCookie } from '../../../../utils/sharedAuth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Récupérer le token de session de l'application principale
-    const mainAppToken = request.headers.get('x-auth-token');
-    
-    if (!mainAppToken) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Aucun token fourni' 
-      }, { status: 401 });
+    // Récupérer les paramètres de la requête
+    const searchParams = request.nextUrl.searchParams;
+    const userId = searchParams.get('userId');
+    const email = searchParams.get('email');
+    const name = searchParams.get('name');
+    const role = searchParams.get('role');
+    const redirectUrl = searchParams.get('redirect') || '/';
+
+    // Vérifier les paramètres requis
+    if (!userId || !email || !role) {
+      return NextResponse.json(
+        { error: 'Missing required parameters' },
+        { status: 400 }
+      );
     }
+
+    // Créer l'objet utilisateur
+    const user = {
+      id: userId,
+      email,
+      name: name || '',
+      role
+    };
+
+    // Générer un token
+    const token = generateToken(user);
+
+    // Créer une réponse de redirection
+    const response = NextResponse.redirect(new URL(redirectUrl, request.url));
     
-    // Vérifier si le token est au format JWT valide
-    // Cette vérification est basique, la vérification complète
-    // est faite dans verifySharedToken
-    const tokenParts = mainAppToken.split('.');
-    if (tokenParts.length !== 3) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Format de token invalide' 
-      }, { status: 401 });
-    }
-    
-    try {
-      // Si le token est valide, le définir comme cookie pour cette application
-      setAuthCookie(mainAppToken);
-      
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Session synchronisée' 
-      });
-    } catch (error) {
-      console.error('Erreur lors de la définition du cookie:', error);
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Erreur de synchronisation de session' 
-      }, { status: 500 });
-    }
+    // Définir le cookie d'authentification
+    return setAuthCookie(token, response);
   } catch (error) {
-    console.error('Erreur vérification session:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Erreur serveur' 
-    }, { status: 500 });
+    console.error('Error checking session:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

@@ -59,7 +59,8 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
       const { payload } = await jwtVerify(token, secret);
       return payload as unknown as UserPayload;
     } catch (jwtError) {
-      console.error('JWT verification failed:', jwtError.message);
+      // Fix TypeScript error by using a type guard
+      console.error('JWT verification failed:', jwtError instanceof Error ? jwtError.message : 'Unknown error');
       return null;
     }
   } catch (error) {

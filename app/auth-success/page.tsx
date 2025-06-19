@@ -1,13 +1,7 @@
-import { Suspense } from 'react'
+'use client'
 
-// Move client components to a separate component
-export default function AuthSuccessPage() {
-  return (
-    <Suspense fallback={<AuthSuccessLoading />}>
-      <AuthSuccessClient />
-    </Suspense>
-  );
-}
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // Loading state component
 function AuthSuccessLoading() {
@@ -34,13 +28,17 @@ function AuthSuccessLoading() {
   );
 }
 
+// Main component with useSearchParams in a Suspense boundary
+export default function AuthSuccessPage() {
+  return (
+    <Suspense fallback={<AuthSuccessLoading />}>
+      <AuthSuccessContent />
+    </Suspense>
+  );
+}
+
 // Client component that uses useSearchParams
-'use client'
-
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-
-function AuthSuccessClient() {
+function AuthSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(3)

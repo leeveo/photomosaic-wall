@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    // Get token from the URL parameters
+    // Obtenir le token des paramètres de l'URL
     const token = req.nextUrl.searchParams.get('token');
     console.log('Auth callback received token:', !!token, 'Length:', token?.length);
     
@@ -11,16 +11,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(new URL('/', req.url));
     }
 
-    // Get returnUrl from parameters (now points to our auth-success page)
+    // Obtenir l'URL de retour des paramètres (maintenant pointe vers notre page auth-success)
     const returnUrl = req.nextUrl.searchParams.get('returnUrl') || '/auth-success';
 
-    // Add the token to the return URL
-    const targetUrl = new URL(returnUrl);
+    // Créer l'URL cible avec le token
+    const targetUrl = new URL(returnUrl, req.url);
     targetUrl.searchParams.set('token', token);
     
     console.log('Redirecting to:', targetUrl.toString());
     
-    // Simple redirect to the auth-success page with token in URL
+    // Redirection simple vers la page auth-success avec le token dans l'URL
     return NextResponse.redirect(targetUrl);
   } catch (error) {
     console.error('Error in auth callback:', error);

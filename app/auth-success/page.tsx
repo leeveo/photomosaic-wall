@@ -13,9 +13,9 @@ function AuthSuccessLoading() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Authentification en cours...</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Finalisation de l'authentification...</h1>
         <p className="text-gray-600 mb-6">
-          Veuillez patienter pendant que nous vérifions votre authentification.
+          Veuillez patienter pendant que nous traitons votre connexion.
         </p>
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div 
@@ -37,37 +37,63 @@ export default function AuthSuccessPage() {
   );
 }
 
-// Client component that uses useSearchParams
 function AuthSuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(3)
   const [token, setToken] = useState<string | null>(null)
+  const [status, setStatus] = useState('Traitement de l\'authentification...')
 
   useEffect(() => {
-    // Check if we have a token in the URL
-    const tokenParam = searchParams.get('token')
+    // Récupérer le token de l'URL
+    const tokenParam = searchParams?.get('token')
     setToken(tokenParam)
     
-    if (tokenParam) {
-      console.log('Token received, storing in localStorage')
-      // Store the token in localStorage
-      localStorage.setItem('auth_token', tokenParam)
+    if (!tokenParam) {
+      setStatus('Aucun token trouvé dans l\'URL. Vérification des alternatives...')
       
-      // Also set cookies as fallback
-      document.cookie = `shared_auth_token=${tokenParam}; path=/; max-age=${60*60*24*30}`
+      // Vérifier si nous avons un token en localStorage
+      const localToken = localStorage.getItem('auth_token')
+      if (localToken) {
+        setToken(localToken)
+        setStatus('Token trouvé en local. Redirection...')
+      } else {
+        setStatus('Aucun token d\'authentification trouvé.')
+        return
+      }
+    } else {
+      setStatus('Token reçu avec succès')
+    }
+    
+    const finalToken = tokenParam || localStorage.getItem('auth_token')
+    
+    if (finalToken) {
+      // Stocker le token dans localStorage pour les futures requêtes
+      localStorage.setItem('auth_token', finalToken)
+      
+      // Définir les cookies pour la compatibilité
+      document.cookie = `shared_auth_token=${finalToken}; path=/; max-age=${60*60*24*30}`
       document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600'
       
-      // Get the return URL
-      const returnTo = searchParams.get('returnTo') || '/admin'
+      // Essayer de partager ce token avec l'application principale aussi
+      try {
+        if (window.opener) {
+          window.opener.postMessage({ type: 'AUTH_TOKEN', token: finalToken }, '*')
+        }
+      } catch (e) {
+        console.error('Erreur lors du partage du token avec l\'application principale:', e)
+      }
       
-      // Start countdown
+      // Récupérer l'URL de retour
+      const returnTo = searchParams?.get('returnTo') || '/admin'
+      
+      // Démarrer le décompte pour la redirection
       const timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
             clearInterval(timer)
-            // Redirect to the admin page with token in URL for maximum compatibility
-            router.push(`${returnTo}${returnTo.includes('?') ? '&' : '?'}token=${tokenParam}`)
+            // Rediriger vers la page demandée avec le token dans l'URL pour s'assurer qu'il soit détecté
+            router.push(`${returnTo}${returnTo.includes('?') ? '&' : '?'}token=${finalToken}`)
           }
           return prev - 1
         })
@@ -101,7 +127,7 @@ function AuthSuccessContent() {
         ) : (
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4 text-left">
             <p className="text-yellow-700">
-              Aucun token d'authentification n'a été reçu. Veuillez essayer de vous connecter à nouveau.
+              {status}
             </p>
             <button
               onClick={() => router.push('/auth-redirect')}

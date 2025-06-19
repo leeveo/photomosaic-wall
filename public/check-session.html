@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vérification de session</title>
+  <script>
+    // Écouter les messages provenant du parent
+    window.addEventListener('message', function(event) {
+      // Vérifier que le message vient d'un domaine autorisé
+      // Dans un environnement de production, restreindre davantage les origines autorisées
+      if (event.data === 'GET_TOKEN') {
+        // Récupérer le token d'authentification
+        let token = localStorage.getItem('auth_token');
+        
+        // Envoyer le token au parent
+        event.source.postMessage({ token: token }, event.origin);
+      }
+    });
+  </script>
+</head>
+<body>
+  <!-- Page minimale, invisible pour l'utilisateur -->
+</body>
+</html>

@@ -777,14 +777,14 @@ export default function AdminPage() {
 
   // Replace the useEffect for authentication with this more robust version
   useEffect(() => {
-    function getCookieValue(name) {
+    function getCookieValue(name: string): string | null {
       const value = `; ${document.cookie}`;
       const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
+      if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
       return null;
     }
     
-    function checkAuth() {
+    function checkAuth(): boolean {
       console.log('Admin Page: Checking authentication...');
       
       // Check URL parameters first (for initial navigation)

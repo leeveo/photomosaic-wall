@@ -43,10 +43,12 @@ export async function verifySharedToken(token: string): Promise<UserPayload | nu
           }
           console.log('Decoded token missing required fields');
         } catch (jsonError) {
-          console.error('Failed to parse decoded token as JSON:', jsonError.message);
+          // Fix the TypeScript error by using a type guard
+          console.error('Failed to parse decoded token as JSON:', jsonError instanceof Error ? jsonError.message : 'Unknown error');
         }
       } catch (decodeError) {
-        console.error('Failed to decode token as base64:', decodeError.message);
+        // Fix the TypeScript error by using a type guard
+        console.error('Failed to decode token as base64:', decodeError instanceof Error ? decodeError.message : 'Unknown error');
       }
     }
 

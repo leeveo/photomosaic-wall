@@ -12,18 +12,32 @@ export default async function AdminLayout({
   const cookieStore = await cookies();
   const token = cookieStore.get('shared_auth_token')?.value;
   
+  console.log('Admin layout - Token present:', !!token);
+  
   // If no token, redirect to login
   if (!token) {
-    const loginUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login';
-    redirect(loginUrl);
+    // Create the login URL with a return URL back to this app
+    const returnUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mosaic.waibooth.app';
+    const loginUrl = new URL(process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login');
+    loginUrl.searchParams.set('returnUrl', returnUrl + '/admin');
+    
+    console.log('Redirecting to login from layout:', loginUrl.toString());
+    redirect(loginUrl.toString());
   }
   
   // Verify token and get user info
   const user = await verifySharedToken(token);
   
+  console.log('Admin layout - User verified:', !!user);
+  
   if (!user) {
-    const loginUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login';
-    redirect(loginUrl);
+    // Invalid token, redirect to login
+    const returnUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mosaic.waibooth.app';
+    const loginUrl = new URL(process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 'https://photobooth.waibooth.app/photobooth-ia/admin/login');
+    loginUrl.searchParams.set('returnUrl', returnUrl + '/admin');
+    
+    console.log('Redirecting to login due to invalid token:', loginUrl.toString());
+    redirect(loginUrl.toString());
   }
   
   const userEmail = user.email || 'utilisateur@example.com';

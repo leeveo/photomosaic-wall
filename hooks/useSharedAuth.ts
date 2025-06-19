@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-// Remplacer l'import du router
 import { useRouter as useNextRouter } from 'next/navigation';
-import { getAuthToken, removeAuthToken } from '@/utils/clientAuth';
+import { getAuthToken, removeAuthToken, checkAuthTokenValidity } from '@/utils/clientAuth';
 
 // Définir le type d'utilisateur
 export interface SharedAuthUser {
@@ -11,24 +10,65 @@ export interface SharedAuthUser {
   role: string;
 }
 
-export function useSharedAuth(): {
+export function useSharedAuth(options = { autoRedirect: false }): {
   user: SharedAuthUser | null;
   loading: boolean;
+  isAuthorized: boolean;
+  checkLocalAuth: () => Promise<boolean>;
 } {
   const [user, setUser] = useState<SharedAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   // Utiliser un gestionnaire côté client uniquement
   const isBrowser = typeof window !== 'undefined';
   const router = isBrowser ? useNextRouter() : null;
 
+  // Ajouter une fonction pour vérifier l'auth localement
+  const checkLocalAuth = async (): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/auth/check-token');
+      if (!response.ok) return false;
+      
+      const data = await response.json();
+      if (data.authenticated && data.user) {
+        setUser(data.user);
+        setIsAuthorized(true);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Erreur vérification locale:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     async function checkAuth() {
       try {
+        // Vérifier localement d'abord
+        const isLocallyAuth = await checkLocalAuth();
+        if (isLocallyAuth) {
+          setLoading(false);
+          return;
+        }
+        
+        // Si non autorisé localement, continuer avec la vérification existante
         // Vérifier le token dans les cookies
         const token = getAuthToken();
         
         if (!token) {
           setLoading(false);
+          return;
+        }
+        
+        // Utiliser la nouvelle fonction de vérification
+        const isValid = await checkAuthTokenValidity(token);
+        
+        if (!isValid) {
+          // Token invalide, supprimer le cookie
+          removeAuthToken();
+          setLoading(false);
+          setIsAuthorized(false);
           return;
         }
         
@@ -46,13 +86,16 @@ export function useSharedAuth(): {
           // Token invalide, supprimer le cookie
           removeAuthToken();
           setLoading(false);
+          setIsAuthorized(false);
           return;
         }
         
         const data = await response.json();
         setUser(data.user);
+        setIsAuthorized(true);
       } catch (error) {
         console.error('Erreur authentification:', error);
+        setIsAuthorized(false);
       } finally {
         setLoading(false);
       }
@@ -66,5 +109,5 @@ export function useSharedAuth(): {
     }
   }, [isBrowser]);
   
-  return { user, loading };
+  return { user, loading, isAuthorized, checkLocalAuth };
 }

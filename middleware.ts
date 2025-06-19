@@ -14,24 +14,32 @@ export default function middleware(request: NextRequest) {
   
   if (isProtectedPath) {
     // Vérifier si le cookie d'authentification existe
-    const hasAuthCookie = request.cookies.has('shared_auth_token');
+    const authCookie = request.cookies.get('shared_auth_token');
     
-    if (!hasAuthCookie) {
+    // Console log pour le débogage (visible dans les logs du serveur)
+    console.log('Auth cookie:', authCookie?.value ? 'Present' : 'Missing');
+    
+    // Si aucun cookie d'authentification n'est trouvé
+    if (!authCookie?.value) {
       // Rediriger vers la page de connexion de l'application principale
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
       const redirectUrl = encodeURIComponent(request.url);
-      return NextResponse.redirect(
-        `${baseUrl}/photobooth-ia/admin/login?redirect=${redirectUrl}`
-      );
+      const loginUrl = `${baseUrl}/photobooth-ia/admin/login?redirect=${redirectUrl}`;
+      console.log('Redirecting to:', loginUrl);
+      return NextResponse.redirect(loginUrl);
     }
+    
+    // Si nous arrivons ici, le cookie existe - permettre l'accès
+    console.log('Authentication cookie found, access granted');
   }
   
   return NextResponse.next();
 }
 
-// Configurer les chemins sur lesquels le middleware doit s'exécuter
+// Assurez-vous que le matcher est correctement configuré pour les deux types de routage
 export const config = {
   matcher: [
+    '/admin',
     '/admin/:path*'
   ],
 };

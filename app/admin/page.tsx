@@ -125,19 +125,23 @@ export default function AdminPage() {
       try {
         // First try to get basic info from cookie
         const getCookieValue = (name: string) => {
-          const value = `; ${document.cookie}`;
-          const parts = value.split(`; ${name}=`);
-          if (parts.length === 2) {
-            const cookieValue = parts.pop()?.split(';').shift() || '';
-            try {
-              // Try to decode as base64
-              const decoded = atob(cookieValue);
-              const userData = JSON.parse(decoded);
-              return userData;
-            } catch (e) {
-              console.error('Error parsing cookie:', e);
-              return null;
+          try {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+              const cookieValue = parts.pop()?.split(';').shift() || '';
+              try {
+                // Try to decode as base64
+                const decoded = atob(cookieValue);
+                const userData = JSON.parse(decoded);
+                return userData;
+              } catch (e) {
+                console.error('Error parsing cookie:', e);
+                return null;
+              }
             }
+          } catch (e) {
+            console.error('Error accessing cookies:', e);
           }
           return null;
         };
@@ -152,18 +156,27 @@ export default function AdminPage() {
         }
         
         // Now fetch complete user info from API
-        const response = await fetch('/api/users/me');
-        if (response.ok) {
-          const userInfo = await response.json();
-          console.log('User info from API:', userInfo);
-          
-          // If we have an email from the database, use it
-          if (userInfo.email) {
-            setUserEmail(userInfo.email);
+        try {
+          const response = await fetch('/api/users/me');
+          if (response.ok) {
+            const userInfo = await response.json();
+            console.log('User info from API:', userInfo);
+            
+            // If we have an email from the database, use it
+            if (userInfo.email) {
+              setUserEmail(userInfo.email);
+            }
+          } else {
+            console.warn('Failed to fetch user info from API:', response.status);
           }
+        } catch (apiError) {
+          // If API fails, we already have a fallback from the cookie
+          console.error('Error fetching from API:', apiError);
         }
       } catch (error) {
-        console.error('Error fetching user info:', error);
+        console.error('Error in fetchUserInfo:', error);
+        // Use a generic user display if everything fails
+        setUserEmail('Utilisateur');
       }
     };
     

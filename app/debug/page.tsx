@@ -19,7 +19,8 @@ export default function DebugPage() {
       const localToken = localStorage.getItem('auth_token');
       setLocalStorageData(localToken || 'No token in localStorage');
     } catch (e) {
-      setLocalStorageData(`Error accessing localStorage: ${e.message}`);
+      // Fix TypeScript error by using a type guard
+      setLocalStorageData(`Error accessing localStorage: ${e instanceof Error ? e.message : String(e)}`);
     }
     
     // Fetch detailed debug info
@@ -29,7 +30,8 @@ export default function DebugPage() {
         setDebugData(data);
       })
       .catch(err => {
-        setDebugData({ error: err.message });
+        // Fix TypeScript error by using a type guard
+        setDebugData({ error: err instanceof Error ? err.message : String(err) });
       });
       
     // Check auth status
@@ -39,7 +41,8 @@ export default function DebugPage() {
         setAuthStatus(data);
       })
       .catch(err => {
-        setAuthStatus({ error: err.message });
+        // Fix TypeScript error by using a type guard
+        setAuthStatus({ error: err instanceof Error ? err.message : String(err) });
       });
   }, []);
 
@@ -61,7 +64,8 @@ export default function DebugPage() {
         }
       }
     } catch (e) {
-      alert(`Error setting cookie: ${e.message}`);
+      // Fix TypeScript error by using a type guard
+      alert(`Error setting cookie: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -75,7 +79,8 @@ export default function DebugPage() {
       alert('All auth cookies and localStorage cleared');
       window.location.reload();
     } catch (e) {
-      alert(`Error clearing cookies: ${e.message}`);
+      // Fix TypeScript error by using a type guard
+      alert(`Error clearing cookies: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

@@ -638,7 +638,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
                             </svg>
                             Photobooth
                           </span>
@@ -670,7 +670,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10" />
                             </svg>
                             Configurer
@@ -775,59 +775,108 @@ export default function AdminPage() {
     );
   }
 
-  // Add this helper function at the top of the file
-  function getCookieClient(name: string) {
-    if (typeof document === 'undefined') return null;
-    
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
-      return parts.pop()?.split(';').shift() || null;
-    }
-    return null;
-  }
-
-  // Replace the forceAuthentication function with this version
-  function forceAuthentication() {
-    // Only redirect if cookie is actually missing
-    if (typeof window !== 'undefined') {
-      const cookie = getCookieClient('shared_auth_token');
-      
-      // Double check to avoid redirect loops
-      if (!cookie) {
-        const returnUrl = encodeURIComponent(window.location.href);
-        const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
-        const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&shared=true&callbackUrl=${callbackUrl}`;
-        
-        console.log('Redirecting to login from client side:', loginUrl);
-        window.location.href = loginUrl;
-      } else {
-        console.log('Cookie is present, no redirection needed');
-      }
-    }
-  }
-
-  // Replace the useEffect with a better cookie detection
+  // Replace the useEffect for authentication with this more robust version
   useEffect(() => {
-    // More robust cookie check that works with multiple cookie formats
-    const hasCookie = document.cookie.split(';').some(item => {
-      return item.trim().startsWith('shared_auth_token=');
-    });
+    function getCookieValue(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
     
-    if (!hasCookie) {
-      console.log('No auth cookie found in document.cookie, will redirect');
-      // Give a small delay to avoid redirect loops
-      const checkToken = setTimeout(() => {
-        // Check again to make sure it's still missing
-        const cookieNow = getCookieClient('shared_auth_token');
-        if (!cookieNow) {
-          forceAuthentication();
-        }
-      }, 1500);
+    function checkAuth() {
+      console.log('Admin Page: Checking authentication...');
       
-      return () => clearTimeout(checkToken);
+      // Check URL parameters first (for initial navigation)
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenParam = urlParams.get('token');
+      if (tokenParam) {
+        console.log('Found token in URL parameters, setting cookie');
+        
+        // Set cookie from URL parameter
+        document.cookie = `shared_auth_token=${tokenParam}; path=/; max-age=${60*60*24*30}`;
+        
+        // Store in localStorage too
+        localStorage.setItem('auth_token', tokenParam);
+        
+        // Remove token from URL
+        const url = new URL(window.location.href);
+        url.searchParams.delete('token');
+        window.history.replaceState({}, document.title, url.toString());
+        
+        return true;
+      }
+      
+      // Check for cookie
+      const authCookie = getCookieValue('shared_auth_token') || 
+                      getCookieValue('shared_auth_token_js') || 
+                      getCookieValue('shared_auth_token_secure');
+    
+      if (authCookie) {
+        console.log('Auth cookie found, ensuring it is stored in all locations');
+        
+        // Store in all possible locations
+        document.cookie = `shared_auth_token=${authCookie}; path=/; max-age=${60*60*24*30}`;
+        localStorage.setItem('auth_token', authCookie);
+        
+        return true;
+      }
+      
+      // Try localStorage as fallback
+      const storedToken = localStorage.getItem('auth_token');
+      if (storedToken) {
+        console.log('No cookie found, but token exists in localStorage, setting cookie');
+        document.cookie = `shared_auth_token=${storedToken}; path=/; max-age=${60*60*24*30}`;
+        return true;
+      }
+      
+      // No authentication found
+      console.log('No authentication found in any storage location');
+      return false;
+    }
+    
+    // Run the authentication check
+    if (!checkAuth()) {
+      // Check with the server first
+      fetch('/api/auth/status')
+        .then(res => res.json())
+        .then(data => {
+          console.log('Server auth status:', data);
+          
+          if (data.authenticated) {
+            console.log('Server reports we are authenticated, refreshing page');
+            window.location.reload();
+            return;
+          }
+          
+          // Show login prompt
+          const shouldLogin = window.confirm(
+            'Vous devez vous connecter pour accéder à l\'administration. Aller à la page de connexion?'
+          );
+          
+          if (shouldLogin) {
+            const returnUrl = encodeURIComponent(window.location.href);
+            const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
+            const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
+            
+            console.log('Redirecting to:', loginUrl);
+            window.location.href = loginUrl;
+          }
+        })
+        .catch(err => {
+          console.error('Error checking auth status:', err);
+        });
     } else {
-      console.log('Auth cookie found in document.cookie, no redirect needed');
+      // Set up periodic cookie refresh
+      const refreshInterval = setInterval(() => {
+        const token = getCookieValue('shared_auth_token') || localStorage.getItem('auth_token');
+        if (token) {
+          document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+          console.log('Auth cookie refreshed');
+        }
+      }, 10 * 60 * 1000); // Every 10 minutes
+      
+      return () => clearInterval(refreshInterval);
     }
   }, []);
 

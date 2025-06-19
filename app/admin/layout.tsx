@@ -9,7 +9,7 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   // Get user info from cookie
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get('shared_auth_token')?.value;
   
   // If no token, redirect to login

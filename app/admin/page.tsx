@@ -161,7 +161,7 @@ export default function AdminPage() {
             console.log('User info from API:', userInfo);
             
             // Solution de contournement: mapper manuellement les IDs aux emails
-            const knownUsers = {
+            const knownUsers: Record<string, string> = {
               '7a77784c-7864-4fbb-8cb5-1f9b40ca1f62': 'liveshopping.aws@gmail.com',
               'b7ba3165-c079-4df9-8046-eb4172347c7f': 'toto@gmail.com',
               'a3e936bd-5755-4aea-a409-4e194a34ae6e': 'leevea.agency@gmail.com',
@@ -170,7 +170,8 @@ export default function AdminPage() {
               '3cd8377e-50aa-489c-8c4b-72e1d168005c': 'admin@photoboothia.com'
             };
             
-            if (userInfo.id && knownUsers[userInfo.id]) {
+            // Fix for TypeScript error - check if the key exists using string indexing
+            if (userInfo && userInfo.id && typeof userInfo.id === 'string' && knownUsers[userInfo.id]) {
               const correctEmail = knownUsers[userInfo.id];
               console.log('Using known email mapping for user ID:', userInfo.id, '->', correctEmail);
               setUserEmail(correctEmail);

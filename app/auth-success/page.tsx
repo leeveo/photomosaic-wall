@@ -1,9 +1,46 @@
+import { Suspense } from 'react'
+
+// Move client components to a separate component
+export default function AuthSuccessPage() {
+  return (
+    <Suspense fallback={<AuthSuccessLoading />}>
+      <AuthSuccessClient />
+    </Suspense>
+  );
+}
+
+// Loading state component
+function AuthSuccessLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-500 to-teal-600">
+      <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full text-center">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Authentification en cours...</h1>
+        <p className="text-gray-600 mb-6">
+          Veuillez patienter pendant que nous vérifions votre authentification.
+        </p>
+        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-green-500 animate-pulse"
+            style={{ width: '50%' }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Client component that uses useSearchParams
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
-export default function AuthSuccess() {
+function AuthSuccessClient() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(3)
@@ -78,5 +115,5 @@ export default function AuthSuccess() {
         )}
       </div>
     </div>
-  )
+  );
 }

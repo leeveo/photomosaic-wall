@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/utils/sharedAuth';
-import { supabaseAdmin } from '@/lib/supabase.server';
+import { supabase } from '@/lib/supabase'; // Use regular client as fallback
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,29 +20,11 @@ export async function GET(req: NextRequest) {
     console.log('Fetching user data for userId:', user.userId);
 
     try {
-      // Query the admin_users table to get the user's email
-      const { data, error } = await supabaseAdmin
-        .from('admin_users')
-        .select('email')
-        .eq('id', user.userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user email:', error);
-        
-        // Return the userId even if we can't get the email
-        return NextResponse.json({
-          userId: user.userId,
-          email: null,
-          timestamp: user.timestamp,
-          exp: user.exp
-        });
-      }
-
-      // Return user info with email from database
+      // Simply return the user info from the token without database lookup
+      // This avoids Supabase service key issues in production
       return NextResponse.json({
         userId: user.userId,
-        email: data?.email || null,
+        email: user.email || `User ${user.userId.substring(0, 8)}...`,
         timestamp: user.timestamp,
         exp: user.exp
       });

@@ -6,13 +6,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Fix the route handler signature according to Next.js App Router requirements
+// Fix the route handler signature - use destructured params instead of context object
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const userId = context.params.id;
+    const userId = params.id;
     
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });

@@ -6,7 +6,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Fix the route handler function signature to match Next.js App Router requirements
+// Fix the route handler signature with the correct parameter types
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }

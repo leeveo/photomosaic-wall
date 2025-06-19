@@ -1,12 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use transpilePackages to ensure jose works correctly
-  transpilePackages: ['jose'],
-  
-  // Add proper environment settings
-  experimental: {
-    serverComponentsExternalPackages: ['jose'],
-  },
+  // Use serverExternalPackages instead of transpilePackages for jose
+  // since there's a conflict when using both
+  serverExternalPackages: ['jose'],
 };
 
 module.exports = nextConfig;

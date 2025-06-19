@@ -74,6 +74,33 @@ export default function AdminPage() {
   
   // Add this ref at the component level, NOT inside a useEffect
   const isCheckingAuthRef = useRef(false);
+  const authProcessedRef = useRef(false);
+
+  // Add this at the top of the component to handle URL tokens
+  useEffect(() => {
+    // Don't run this more than once
+    if (authProcessedRef.current) return;
+    authProcessedRef.current = true;
+    
+    // Check for token in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    
+    if (token) {
+      console.log('Found token in URL, saving to localStorage and cookies');
+      // Store in localStorage
+      localStorage.setItem('auth_token', token);
+      
+      // Set cookie
+      document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+      document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
+      
+      // Clean up URL by removing the token (security best practice)
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  }, []);
 
   // Remove unused state variables
   // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
@@ -126,7 +153,25 @@ export default function AdminPage() {
     // Fetch user info including email from database
     const fetchUserInfo = async () => {
       try {
-        // Function to decode token from cookie
+        // Try to get more info from API first (most accurate source)
+        try {
+          const response = await fetch('/api/users/me');
+          if (response.ok) {
+            const userInfo = await response.json();
+            console.log('User info from API:', userInfo);
+            
+            if (userInfo.email) {
+              setUserEmail(userInfo.email);
+              // Also store in localStorage for future use
+              localStorage.setItem('user_email', userInfo.email);
+              return;
+            }
+          }
+        } catch (apiError) {
+          console.error('Error fetching from API:', apiError);
+        }
+
+        // Fallback to cookie or localStorage if API fails
         const getCookieValue = (name: string) => {
           try {
             const value = `; ${document.cookie}`;
@@ -158,6 +203,15 @@ export default function AdminPage() {
           return null;
         };
         
+        // Try to get stored email from localStorage first
+        const storedEmail = localStorage.getItem('user_email');
+        if (storedEmail) {
+          console.log('Using email from localStorage:', storedEmail);
+          setUserEmail(storedEmail);
+          return;
+        }
+        
+        // Fall back to token data from cookie
         const userData = getCookieValue('shared_auth_token');
         console.log('User data from cookie:', userData);
         
@@ -168,23 +222,6 @@ export default function AdminPage() {
           setUserEmail(`ID: ${userData.userId.substring(0, 8)}...`);
         } else {
           setUserEmail('Utilisateur');
-        }
-        
-        // Try to get more info from API if needed
-        if (!userData?.email) {
-          try {
-            const response = await fetch('/api/users/me');
-            if (response.ok) {
-              const userInfo = await response.json();
-              console.log('User info from API:', userInfo);
-              
-              if (userInfo.email) {
-                setUserEmail(userInfo.email);
-              }
-            }
-          } catch (apiError) {
-            console.error('Error fetching from API:', apiError);
-          }
         }
       } catch (error) {
         console.error('Error in fetchUserInfo:', error);
@@ -642,7 +679,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
                             </svg>
                             Photobooth
                           </span>
@@ -788,103 +825,15 @@ export default function AdminPage() {
       return null;
     }
     
-    function checkAuth(): boolean {
-      console.log('Admin Page: Checking authentication...');
-      
-      // IMPORTANT: Check URL parameters first (highest priority)
-      const urlParams = new URLSearchParams(window.location.search);
-      const tokenParam = urlParams.get('token');
-      if (tokenParam) {
-        console.log('Found token in URL parameters, setting cookie and localStorage');
-        
-        // Store in localStorage for persistence
-        localStorage.setItem('auth_token', tokenParam);
-        
-        // Set cookie from URL parameter
-        document.cookie = `shared_auth_token=${tokenParam}; path=/; max-age=${60*60*24*30}`;
-        
-        // Remove token from URL for security
-        const url = new URL(window.location.href);
-        url.searchParams.delete('token');
-        window.history.replaceState({}, document.title, url.toString());
-        
-        return true;
-      }
-      
-      // Check for cookie or localStorage
-      const authCookie = getCookieValue('shared_auth_token') || 
-                      getCookieValue('shared_auth_token_js') || 
-                      getCookieValue('shared_auth_token_secure');
-      
-      const storedToken = localStorage.getItem('auth_token');
-      
-      if (authCookie || storedToken) {
-        // We have at least one source of authentication, use it
-        const token = authCookie || storedToken;
-        
-        if (token) {
-          // Store in all possible locations for consistency
-          document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
-          localStorage.setItem('auth_token', token);
-        }
-        
-        return true;
-      }
-      
-      return false;
-    }
-    
-    // Don't use the ref inside this effect, just use a normal local variable
-    if (!isCheckingAuthRef.current) {
-      isCheckingAuthRef.current = true;
-      
-      if (!checkAuth()) {
-        // We're not authenticated locally, check with server once
-        console.log('No local auth found, checking with server...');
-        
-        fetch('/api/auth/status')
-          .then(res => res.json())
-          .then(data => {
-            console.log('Server auth status:', data);
-            
-            if (data.authenticated) {
-              console.log('Server says we are authenticated, will not redirect');
-              return;
-            }
-            
-            // Only redirect if we're definitely not authenticated
-            const shouldLogin = window.confirm(
-              'Vous devez vous connecter pour accéder à l\'administration. Aller à la page de connexion?'
-            );
-            
-            if (shouldLogin) {
-              const returnUrl = encodeURIComponent(window.location.href);
-              const callbackUrl = encodeURIComponent(`${window.location.origin}/api/auth/callback`);
-              const loginUrl = `https://photobooth.waibooth.app/photobooth-ia/admin/login?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
-              
-              console.log('Redirecting to:', loginUrl);
-              window.location.href = loginUrl;
-            }
-          })
-          .catch(err => {
-            console.error('Error checking auth status:', err);
-          })
-          .finally(() => {
-            isCheckingAuthRef.current = false;
-          });
-      } else {
-        isCheckingAuthRef.current = false;
-      }
-    }
-    
-    // Set up periodic cookie refresh with a longer interval (30 minutes)
+    // Set up periodic cookie refresh
     const refreshInterval = setInterval(() => {
-      const token = getCookieValue('shared_auth_token') || localStorage.getItem('auth_token');
+      // Prioritize localStorage token
+      const token = localStorage.getItem('auth_token') || getCookieValue('shared_auth_token');
       if (token) {
         document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
-        console.log('Auth cookie refreshed silently');
+        document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
       }
-    }, 30 * 60 * 1000); // Every 30 minutes instead of 10
+    }, 30 * 60 * 1000); // Every 30 minutes
     
     return () => clearInterval(refreshInterval);
   }, []);

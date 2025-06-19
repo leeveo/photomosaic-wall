@@ -1,45 +1,67 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Check for any auth source
+// Simplified authentication check
 function isAuthenticated(req: NextRequest): boolean {
-  // Check for cookies
-  const hasCookies = req.cookies.has('shared_auth_token') || 
-                    req.cookies.has('shared_auth_token_secure');
-  
-  if (hasCookies) {
+  // Check for token in query string FIRST (highest priority)
+  const hasTokenParam = !!req.nextUrl.searchParams.get('token');
+  if (hasTokenParam) {
+    console.log('Token found in URL params - allowing access');
     return true;
   }
   
-  // Check for token in query string (useful for initial redirects)
-  const hasTokenParam = !!req.nextUrl.searchParams.get('token');
+  // Check for cookies
+  const hasCookies = req.cookies.has('shared_auth_token') || 
+                    req.cookies.has('shared_auth_token_secure') ||
+                    req.cookies.has('shared_auth_token_js');
   
-  // Check for special headers (could be set by your frontend)
+  if (hasCookies) {
+    console.log('Token found in cookies - allowing access');
+    return true;
+  }
+  
+  // Check for auth header (could be set by your frontend)
   const hasAuthHeader = req.headers.get('x-auth-token') !== null;
+  if (hasAuthHeader) {
+    console.log('Token found in headers - allowing access');
+    return true;
+  }
   
-  return hasCookies || hasTokenParam || hasAuthHeader;
+  // Last resort - check local storage flag (this is set by client-side code)
+  // Note: We can't directly access localStorage from middleware, so we rely on a cookie flag
+  const hasLSFlag = req.cookies.has('has_auth_in_ls');
+  if (hasLSFlag) {
+    console.log('Local storage auth flag found - allowing access');
+    return true;
+  }
+  
+  console.log('No authentication source found');
+  return false;
 }
 
 export async function middleware(req: NextRequest) {
   try {
     const path = req.nextUrl.pathname;
     
-    // Always allow debug and API routes
-    if (path === '/debug' || path.startsWith('/api/')) {
-      return NextResponse.next();
-    }
+    // DEBUG: Log the request
+    console.log(`Middleware checking: ${path}`, {
+      hasCookies: req.cookies.getAll().length > 0,
+      hasToken: !!req.nextUrl.searchParams.get('token'),
+      cookies: req.cookies.getAll().map(c => c.name)
+    });
     
-    // Check for token in URL first - ALWAYS allow access if token is in URL
-    const hasTokenInUrl = !!req.nextUrl.searchParams.get('token');
-    if (hasTokenInUrl) {
-      console.log('Middleware: Token found in URL, allowing access');
+    // Always allow API and public routes
+    if (path.startsWith('/api/') || 
+        path === '/debug' || 
+        path.startsWith('/auth-redirect') ||
+        path === '/') {
       return NextResponse.next();
     }
     
     // Only enforce auth for admin routes
     if (path === '/admin' || path.startsWith('/admin/')) {
       const authenticated = isAuthenticated(req);
-      console.log(`Middleware auth check: path=${path}, authenticated=${authenticated}`);
+      console.log(`Auth check for ${path}: ${authenticated ? 'ALLOWED' : 'DENIED'}`);
       
       // Skip auth check for crawlers
       const userAgent = req.headers.get('user-agent') || '';
@@ -49,21 +71,14 @@ export async function middleware(req: NextRequest) {
       }
       
       if (!authenticated) {
-        console.log('Not authenticated, redirecting to login');
+        console.log('Authentication failed, redirecting to auth-redirect page');
         
-        // Build the login URL with all necessary parameters
-        const origin = new URL(req.url).origin;
-        const returnUrl = encodeURIComponent(`${origin}/admin`);
-        const callbackUrl = encodeURIComponent(`${origin}/api/auth/callback`);
+        // Redirect to our custom auth redirector page rather than directly to login
+        const authRedirectUrl = new URL('/auth-redirect', req.url);
+        // Pass the originally requested URL as a parameter
+        authRedirectUrl.searchParams.set('returnTo', req.url);
         
-        // Use environment variable for login URL if available
-        const loginBaseUrl = process.env.NEXT_PUBLIC_AUTH_LOGIN_URL || 
-                         'https://photobooth.waibooth.app/photobooth-ia/admin/login';
-                         
-        const loginUrl = `${loginBaseUrl}?returnUrl=${returnUrl}&callbackUrl=${callbackUrl}&shared=true`;
-        
-        console.log('Redirecting to:', loginUrl);
-        return NextResponse.redirect(loginUrl);
+        return NextResponse.redirect(authRedirectUrl);
       }
     }
     
@@ -71,14 +86,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   } catch (error) {
     console.error('Middleware error:', error);
+    // In case of errors, allow the request to proceed
     return NextResponse.next();
   }
 }
 
 export const config = {
   matcher: [
-    '/admin/:path*', 
-    '/api/:path*', 
-    '/debug',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -67,7 +67,9 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">Connecté en tant que</p>
-            <p className="text-sm text-gray-500 truncate">{email}</p>
+            {email && (
+              <p className="text-sm text-gray-500 truncate">{email}</p>
+            )}
           </div>
           <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
             Dashboard

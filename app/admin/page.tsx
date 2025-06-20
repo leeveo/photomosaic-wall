@@ -120,27 +120,44 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    // Get user info from cookie if available
-    const getCookieValue = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) {
-        const cookieValue = parts.pop()?.split(';').shift() || '';
+    // Récupérer l'email réel depuis le cookie et la base admin_users
+    const getEmailFromToken = async () => {
+      const getCookieValue = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+          return parts.pop()?.split(';').shift() || '';
+        }
+        return '';
+      };
+
+      const token = getCookieValue('shared_auth_token');
+      if (token) {
         try {
-          // Try to decode as base64
-          const decoded = atob(cookieValue);
+          const decoded = atob(token);
           const userData = JSON.parse(decoded);
-          return userData.email || `User ID: ${userData.userId.substring(0, 8)}...`;
+          const userId = userData.userId;
+          if (userId) {
+            // Appel API pour récupérer l'email réel
+            const { data: user, error } = await supabase
+              .from('admin_users')
+              .select('email')
+              .eq('id', userId)
+              .single();
+            if (user && user.email) {
+              setUserEmail(user.email);
+              return;
+            }
+          }
         } catch (e) {
-          // If not base64 encoded or not JSON, return the raw value
-          return cookieValue;
+          // fallback below
         }
       }
-      return '';
+      // Ne rien afficher si l'email n'est pas trouvé
+      setUserEmail('');
     };
-    
-    const email = getCookieValue('shared_auth_token');
-    setUserEmail(email || 'utilisateur@example.com');
+
+    getEmailFromToken();
   }, []);
 
   const deleteTile = async (tileId: string, imageUrl: string) => {

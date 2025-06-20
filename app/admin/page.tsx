@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
@@ -71,38 +71,6 @@ export default function AdminPage() {
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string>('')
-  
-  // Add this ref at the component level, NOT inside a useEffect
-  const isCheckingAuthRef = useRef(false);
-  const authProcessedRef = useRef(false);
-
-  // Add this at the top of the component to handle URL tokens
-  useEffect(() => {
-    // Don't run this more than once
-    if (authProcessedRef.current) return;
-    authProcessedRef.current = true;
-    
-    // Check for token in URL
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    
-    if (token) {
-      console.log('Found token in URL, saving to localStorage and cookies');
-      // Store in localStorage
-      localStorage.setItem('auth_token', token);
-      
-      // Set cookie with multiple formats for maximum compatibility
-      document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
-      document.cookie = `admin_session=${token}; path=/; max-age=${60*60*24*30}`;
-      document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
-      
-      // Clean up URL by removing the token (security best practice)
-      const url = new URL(window.location.href);
-      url.searchParams.delete('token');
-      url.searchParams.delete('bypass');
-      window.history.replaceState({}, document.title, url.toString());
-    }
-  }, []);
 
   // Remove unused state variables
   // const [showMosaicMenu, setShowMosaicMenu] = useState(true)
@@ -152,105 +120,27 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    // Fetch user info including email from database
-    const fetchUserInfo = async () => {
-      try {
-        // Try to get more info from API first (most accurate source)
+    // Get user info from cookie if available
+    const getCookieValue = (name: string) => {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        const cookieValue = parts.pop()?.split(';').shift() || '';
         try {
-          const response = await fetch('/api/users/me');
-          if (response.ok) {
-            const userInfo = await response.json();
-            console.log('User info from API:', userInfo);
-            
-            // Solution de contournement: mapper manuellement les IDs aux emails
-            const knownUsers: Record<string, string> = {
-              '7a77784c-7864-4fbb-8cb5-1f9b40ca1f62': 'liveshopping.aws@gmail.com',
-              'b7ba3165-c079-4df9-8046-eb4172347c7f': 'toto@gmail.com',
-              'a3e936bd-5755-4aea-a409-4e194a34ae6e': 'leevea.agency@gmail.com',
-              '8fdfef23-8fdf-4268-81bc-c3b9141254ff': 'marcmenu707@gmail.com',
-              '6efa0299-868e-4647-b07f-ac49b2865206': 'leeveo.tv@gmail.com',
-              '3cd8377e-50aa-489c-8c4b-72e1d168005c': 'admin@photoboothia.com'
-            };
-            
-            // Fix for TypeScript error - check if the key exists using string indexing
-            if (userInfo && userInfo.id && typeof userInfo.id === 'string' && knownUsers[userInfo.id]) {
-              const correctEmail = knownUsers[userInfo.id];
-              console.log('Using known email mapping for user ID:', userInfo.id, '->', correctEmail);
-              setUserEmail(correctEmail);
-              localStorage.setItem('user_email', correctEmail);
-              return;
-            }
-            
-            if (userInfo.email) {
-              setUserEmail(userInfo.email);
-              // Also store in localStorage for future use
-              localStorage.setItem('user_email', userInfo.email);
-              return;
-            }
-          }
-        } catch (apiError) {
-          console.error('Error fetching from API:', apiError);
+          // Try to decode as base64
+          const decoded = atob(cookieValue);
+          const userData = JSON.parse(decoded);
+          return userData.email || `User ID: ${userData.userId.substring(0, 8)}...`;
+        } catch (e) {
+          // If not base64 encoded or not JSON, return the raw value
+          return cookieValue;
         }
-
-        // Fallback to cookie or localStorage if API fails
-        const getCookieValue = (name: string) => {
-          try {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) {
-              const cookieValue = parts.pop()?.split(';').shift() || '';
-              try {
-                // Check if it's a JWT token (contains dots)
-                if (cookieValue.includes('.') && cookieValue.split('.').length === 3) {
-                  // JWT token - try to extract email from payload
-                  const payload = JSON.parse(atob(cookieValue.split('.')[1]));
-                  if (payload.email) {
-                    return { email: payload.email, userId: payload.sub || payload.userId };
-                  }
-                }
-                
-                // Try to decode as base64
-                const decoded = atob(cookieValue);
-                const userData = JSON.parse(decoded);
-                return userData;
-              } catch (e) {
-                console.error('Error parsing cookie:', e);
-                return null;
-              }
-            }
-          } catch (e) {
-            console.error('Error accessing cookies:', e);
-          }
-          return null;
-        };
-        
-        // Try to get stored email from localStorage first
-        const storedEmail = localStorage.getItem('user_email');
-        if (storedEmail) {
-          console.log('Using email from localStorage:', storedEmail);
-          setUserEmail(storedEmail);
-          return;
-        }
-        
-        // Fall back to token data from cookie
-        const userData = getCookieValue('shared_auth_token');
-        console.log('User data from cookie:', userData);
-        
-        // Set default display
-        if (userData?.email) {
-          setUserEmail(userData.email);
-        } else if (userData?.userId) {
-          setUserEmail(`ID: ${userData.userId.substring(0, 8)}...`);
-        } else {
-          setUserEmail('Utilisateur');
-        }
-      } catch (error) {
-        console.error('Error in fetchUserInfo:', error);
-        setUserEmail('Utilisateur');
       }
+      return '';
     };
     
-    fetchUserInfo();
+    const email = getCookieValue('shared_auth_token');
+    setUserEmail(email || 'utilisateur@example.com');
   }, []);
 
   const deleteTile = async (tileId: string, imageUrl: string) => {
@@ -690,7 +580,6 @@ export default function AdminPage() {
                             Galerie
                           </span>
                         </button>
-                        {/* Photobooth button */}
                         <a
                           href={`/photo?id=${project.slug}`}
                           target="_blank"
@@ -700,7 +589,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A2 2 0 0021 6.382V5a2 2 0 00-2-2H5a2 2 0 00-2 2v1.382a2 2 0 001.447 1.342L9 10m6 0v6a2 2 0 01-2 2H7a2 2 0 01-2-2v-6m10 0H9" />
                             </svg>
                             Photobooth
                           </span>
@@ -732,7 +621,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10" />
                             </svg>
                             Configurer
@@ -837,26 +726,22 @@ export default function AdminPage() {
     );
   }
 
-  // Replace the useEffect for authentication with this fixed version
+  // Ajout pour prise en charge du token dans l'URL (partage session cross-app)
   useEffect(() => {
-    function getCookieValue(name: string): string | null {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
-      return null;
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      // Stocker dans localStorage et cookies pour compatibilité
+      localStorage.setItem('auth_token', token);
+      document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
+      document.cookie = `admin_session=${token}; path=/; max-age=${60*60*24*30}`;
+      document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
+      // Nettoyer l'URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      url.searchParams.delete('bypass');
+      window.history.replaceState({}, document.title, url.toString());
     }
-    
-    // Set up periodic cookie refresh
-    const refreshInterval = setInterval(() => {
-      // Prioritize localStorage token
-      const token = localStorage.getItem('auth_token') || getCookieValue('shared_auth_token');
-      if (token) {
-        document.cookie = `shared_auth_token=${token}; path=/; max-age=${60*60*24*30}`;
-        document.cookie = 'has_auth_in_ls=true; path=/; max-age=3600';
-      }
-    }, 30 * 60 * 1000); // Every 30 minutes
-    
-    return () => clearInterval(refreshInterval);
   }, []);
 
   return (

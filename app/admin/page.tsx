@@ -120,27 +120,47 @@ export default function AdminPage() {
   }, [])
 
   useEffect(() => {
-    // Get user info from cookie if available
-    const getCookieValue = (name: string) => {
-      const value = `; ${document.cookie}`;
-      const parts = value.split(`; ${name}=`);
-      if (parts.length === 2) {
-        const cookieValue = parts.pop()?.split(';').shift() || '';
-        try {
-          // Try to decode as base64
-          const decoded = atob(cookieValue);
-          const userData = JSON.parse(decoded);
-          return userData.email || `User ID: ${userData.userId.substring(0, 8)}...`;
-        } catch (e) {
-          // If not base64 encoded or not JSON, return the raw value
-          return cookieValue;
-        }
+    // Récupère le userId depuis le token (cookie ou localStorage)
+    const getUserIdFromToken = () => {
+      let token = '';
+      // Prend le token depuis le cookie ou localStorage
+      const cookies = document.cookie.split(';').map(c => c.trim());
+      const cookieToken = cookies.find(c => c.startsWith('shared_auth_token='));
+      if (cookieToken) {
+        token = cookieToken.split('=')[1];
+      } else {
+        token = localStorage.getItem('auth_token') || '';
       }
-      return '';
+      if (!token) return null;
+      try {
+        const decoded = atob(token);
+        const data = JSON.parse(decoded);
+        return data.userId || null;
+      } catch {
+        return null;
+      }
     };
-    
-    const email = getCookieValue('shared_auth_token');
-    setUserEmail(email || 'utilisateur@example.com');
+
+    const fetchEmail = async () => {
+      const userId = getUserIdFromToken();
+      if (!userId) {
+        setUserEmail('utilisateur@example.com');
+        return;
+      }
+      // Va chercher l'email dans la table admin_users
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('email')
+        .eq('id', userId)
+        .single();
+      if (data?.email) {
+        setUserEmail(data.email);
+      } else {
+        setUserEmail('utilisateur@example.com');
+      }
+    };
+
+    fetchEmail();
   }, []);
 
   const deleteTile = async (tileId: string, imageUrl: string) => {

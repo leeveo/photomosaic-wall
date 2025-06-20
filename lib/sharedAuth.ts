@@ -13,13 +13,14 @@ export function setSharedAuthCookie(res: NextResponse, token: string): NextRespo
   console.log('Définition du cookie d\'authentification partagée');
   
   // Définir le cookie accessible par notre application
-  res.cookies.set('shared_auth_token', token, {
-    path: '/',
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7 // 1 semaine
-  });
+ res.cookies.set('shared_auth_token', token, {
+  path: '/',
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax',
+  maxAge: 60 * 60 * 24 * 7,
+  domain: process.env.NODE_ENV === 'production' ? '.waibooth.app' : undefined
+});
   
   // Définir le flag indiquant que l'authentification est dans localStorage
   res.cookies.set('has_auth_in_ls', 'true', {

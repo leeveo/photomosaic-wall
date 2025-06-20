@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+// Correction : importer generateSharedToken depuis le bon chemin
 import { generateSharedToken, setSharedAuthCookie } from './utils/sharedAuth';
 
 // Auth check: token in URL, admin_session/shared_auth_token cookie, has_auth_in_ls, or bypass param

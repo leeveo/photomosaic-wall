@@ -11,26 +11,26 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Définir le cookie d'authentification partagée
 export function setSharedAuthCookie(res: NextResponse, token: string): NextResponse {
   console.log('Définition du cookie d\'authentification partagée');
-  
-  // Définir le cookie accessible par notre application
- res.cookies.set('shared_auth_token', token, {
-  path: '/',
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge: 60 * 60 * 24 * 7,
-  domain: process.env.NODE_ENV === 'production' ? '.waibooth.app' : undefined
-});
-  
+
+  // Correction : toujours définir le domaine sur .waibooth.app en production
+  res.cookies.set('shared_auth_token', token, {
+    path: '/',
+    httpOnly: true,
+    secure: true, // Toujours true en production pour cross-domain
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    domain: '.waibooth.app' // <-- Forcer le domaine, pas de condition sur NODE_ENV
+  });
+
   // Définir le flag indiquant que l'authentification est dans localStorage
   res.cookies.set('has_auth_in_ls', 'true', {
     path: '/',
-    httpOnly: false, // Accessible par JavaScript
-    secure: process.env.NODE_ENV === 'production',
+    httpOnly: false,
+    secure: true,
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7 // 1 semaine
+    maxAge: 60 * 60 * 24 * 7
   });
-  
+
   return res;
 }
 

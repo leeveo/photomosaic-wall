@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { generateSharedToken, setSharedAuthCookie } from './utils/sharedAuth';
 
 // Auth check: token in URL, admin_session/shared_auth_token cookie, has_auth_in_ls, or bypass param
 function isAuthenticated(req: NextRequest): boolean {
@@ -34,20 +35,51 @@ function isAuthenticated(req: NextRequest): boolean {
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
-  console.log('Middleware:', path, req.url);
+  const res = NextResponse.next();
 
-  // Always allow public/static paths
-  if (
-    path.startsWith('/api/') ||
-    path === '/' ||
-    path.startsWith('/_next/') ||
-    path.includes('auth-success') ||
-    path.includes('auth-redirect') ||
-    path.includes('auth-callback') ||
-    path.includes('debug') ||
-    path.includes('favicon')
-  ) {
-    return NextResponse.next();
+  // Redirection racine
+  if (path === '/' || path === '') {
+    const adminUrl = new URL('/photobooth-ia/admin', req.url);
+    return NextResponse.redirect(adminUrl, 308);
+  }
+
+  // CORS headers
+  res.headers.set('Access-Control-Allow-Origin', '*');
+  res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Exclusions
+  const isAdminRoute = path.startsWith('/photobooth-ia/admin');
+  const isExcluded =
+    path === '/photobooth-ia/admin/login' ||
+    path === '/photobooth-ia/admin/logout' ||
+    path === '/photobooth-ia/admin/register' ||
+    path === '/photobooth-ia/admin/oauth-callback' ||
+    path === '/photobooth-ia/admin/dashboard';
+
+  // Si route admin et pas exclue
+  if (isAdminRoute && !isExcluded) {
+    const customAuthCookie = req.cookies.get('admin_session')?.value;
+
+    if (!customAuthCookie) {
+      return NextResponse.redirect(new URL('/photobooth-ia/admin/login', req.url));
+    }
+
+    // Toujours poser le cookie partagé si admin_session existe
+    try {
+      const decoded = Buffer.from(customAuthCookie, 'base64').toString();
+      const adminSession = JSON.parse(decoded);
+      const userId = adminSession.userId;
+
+      if (userId) {
+        const newSharedToken = await generateSharedToken(userId);
+        if (newSharedToken) {
+          setSharedAuthCookie(res, newSharedToken);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la création du token partagé:', error);
+    }
   }
 
   // Protect /admin routes
@@ -67,11 +99,13 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return res;
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    '/',  // Root path
+    '/api/:path*',
+    '/photobooth-ia/admin/:path*',
   ],
 };

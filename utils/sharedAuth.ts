@@ -166,19 +166,3 @@ export function clearSharedAuthCookie(response: NextResponse): NextResponse {
   
   return response;
 }
-
-// Ajoute cette fonction utilitaire pour générer un token partagé (base64)
-export async function generateSharedToken(userId: string): Promise<string | null> {
-  try {
-    const payload = {
-      userId,
-      timestamp: Date.now(),
-      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7 // 7 jours
-    };
-    const token = Buffer.from(JSON.stringify(payload)).toString('base64');
-    return token;
-  } catch (error) {
-    console.error('Erreur génération token partagé:', error);
-    return null;
-  }
-}

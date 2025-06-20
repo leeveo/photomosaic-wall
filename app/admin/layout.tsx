@@ -7,50 +7,42 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  let userId: string | undefined = undefined;
+
   try {
-    // Get user info from cookie
     const cookieStore = await cookies();
     const token = cookieStore.get('shared_auth_token')?.value;
 
-    console.log('Admin layout - Token present:', !!token);
-
     if (token) {
       try {
-        // Décoder le token base64 pour log l'id utilisateur
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
         const userData = JSON.parse(decoded);
-        const userId = userData.userId;
-        console.log('Admin layout - UserId from shared_auth_token:', userId);
-
-        // Récupérer l'email depuis la table admin_users
+        userId = userData.userId;
         if (userId) {
-          const { data: user, error } = await supabase
-            .from('admin_users')
-            .select('email')
-            .eq('id', userId)
-            .single();
-
-          if (user && user.email) {
-            console.log('Admin layout - Email from admin_users:', user.email);
-          } else if (error) {
-            console.log('Admin layout - Error fetching email:', error.message);
-          } else {
-            console.log('Admin layout - No email found for userId:', userId);
-          }
+          console.log('Admin layout - UserId from shared_auth_token:', userId);
+        } else {
+          console.log('Admin layout - Token present but userId missing:', userData);
         }
       } catch (e) {
-        console.log('Admin layout - Failed to decode token or fetch email:', e);
+        console.log('Admin layout - Failed to decode token:', e);
       }
     } else {
       console.log('Admin layout - No shared_auth_token found');
     }
-
-    // Simply render the children - middleware already handled auth check
-    return children;
   } catch (error) {
-    console.error('Unhandled error in admin layout:', error);
-
-    // Always render the children to avoid server errors
-    return children;
+    console.log('Admin layout - Error reading cookies:', error);
   }
+
+  // Si pas d'userId, refuse l'accès (affiche un message ou rien)
+  if (!userId) {
+    console.log('Admin layout - ACCESS DENIED: No valid userId found in cookie');
+    return (
+      <div style={{ color: 'red', padding: 32, fontWeight: 'bold', fontSize: 18 }}>
+        Accès refusé : utilisateur non authentifié (cookie absent ou invalide)
+      </div>
+    );
+  }
+
+  // Simply render the children - middleware already handled auth check
+  return children;
 }

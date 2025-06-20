@@ -35,10 +35,14 @@ function isAuthenticated(req: NextRequest): boolean {
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const hostname = req.nextUrl.hostname;
   const res = NextResponse.next();
 
-  // Redirection racine
-  if (path === '/' || path === '') {
+  // Redirection racine UNIQUEMENT sur photobooth.waibooth.app
+  if (
+    (path === '/' || path === '') &&
+    (hostname === 'photobooth.waibooth.app' || hostname.startsWith('localhost'))
+  ) {
     const adminUrl = new URL('/photobooth-ia/admin', req.url);
     return NextResponse.redirect(adminUrl, 308);
   }

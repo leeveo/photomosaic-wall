@@ -102,25 +102,25 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      
       {isMenuOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-          <div className="px-4 py-2 border-b border-gray-100">
-            <p className="text-sm font-medium text-gray-900">Connecté en tant que</p>
-            <p className="text-sm text-gray-500 truncate">{emailFromDb || email}</p>
+        <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 transition-all duration-200 transform origin-top-right">
+          <div className="p-4 border-b border-gray-100">
+            <p className="text-sm text-gray-500">Connecté en tant que:</p>
+            <p className="font-medium text-gray-800 truncate">{emailFromDb || email}</p>
             {userIdFromCookie && (
               <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromCookie}</span></p>
             )}
           </div>
-          <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-            Dashboard
-          </Link>
-          <Link href="/admin/setup" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-            Créer un projet
-          </Link>
-          <a href="/api/auth/logout" className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-            Déconnexion
-          </a>
+          <div className="p-2">
+            <a 
+              href="/api/auth/logout"
+              className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            >
+              {/* Remplace FiLogOut par une icône SVG inline si tu ne veux pas importer react-icons */}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" /></svg>
+              <span>Déconnexion</span>
+            </a>
+          </div>
         </div>
       )}
     </div>

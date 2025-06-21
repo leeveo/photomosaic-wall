@@ -68,6 +68,27 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">Connecté en tant que</p>
             <p className="text-sm text-gray-500 truncate">{email}</p>
+            {/* Affiche l'ID utilisateur si disponible dans le cookie global */}
+            {typeof window !== 'undefined' && (
+              (() => {
+                try {
+                  // Cherche le cookie admin_session ou shared_auth_token
+                  const cookies = document.cookie.split(';').map(c => c.trim());
+                  const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='));
+                  if (tokenCookie) {
+                    const token = tokenCookie.split('=')[1];
+                    const decoded = atob(token);
+                    const userData = JSON.parse(decoded);
+                    if (userData.userId) {
+                      return <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userData.userId}</span></p>;
+                    }
+                  }
+                } catch (e) {
+                  // ignore
+                }
+                return null;
+              })()
+            )}
           </div>
           <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
             Dashboard

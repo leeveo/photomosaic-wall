@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { generateSharedToken, setSharedAuthCookie } from './utils/sharedAuth';
 
 // Auth check: token in URL, admin_session/shared_auth_token cookie, has_auth_in_ls, or bypass param
 function isAuthenticated(req: NextRequest): boolean {
@@ -9,14 +8,14 @@ function isAuthenticated(req: NextRequest): boolean {
     console.log('Token in URL - access granted');
     return true;
   }
-  // 2. admin_session cookie (from main app)
-  if (req.cookies.has('admin_session')) {
-    console.log('admin_session cookie found - access granted');
-    return true;
-  }
-  // 3. shared_auth_token cookie
+  // 2. shared_auth_token cookie
   if (req.cookies.has('shared_auth_token')) {
     console.log('shared_auth_token cookie found - access granted');
+    return true;
+  }
+  // 3. admin_session cookie (from main app)
+  if (req.cookies.has('admin_session')) {
+    console.log('admin_session cookie found - access granted');
     return true;
   }
   // 4. has_auth_in_ls flag
@@ -86,7 +85,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Protect /admin routes
+  // Protect /admin routes (pour mosaic)
   if (path === '/admin' || path.startsWith('/admin/')) {
     if (!isAuthenticated(req)) {
       console.log('Not authenticated, redirecting to login');

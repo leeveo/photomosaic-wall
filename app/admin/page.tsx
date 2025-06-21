@@ -837,10 +837,10 @@ export default function AdminPage() {
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${app.color} shadow-sm hover:scale-[1.03] transition-transform`}
               >
                 {app.icon}
-                <span className="font-medium">{app.label}</span>
-              </a>
+                <span className="font-medium">{app.label}</span>              </a>
             ))}
           </div>
+        </nav>
 
       {/* Backdrop overlay for mobile */}
       {isSidebarOpen && (

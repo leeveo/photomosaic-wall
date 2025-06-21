@@ -791,13 +791,55 @@ export default function AdminPage() {
               <span className="text-sm">{label}</span>
             </button>
           ))}
+          {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
           <hr className="my-6 border-gray-200" />
-          <button
-            onClick={() => router.push('/')}
-            className="w-full flex items-center px-6 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600"
-          >
-            <span className="mx-4">⬅️ Retour à l&apos;accueil</span>
-          </button>
+          <div className="flex flex-col gap-2 px-6">
+            <a
+              href={process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-medium transition"
+            >
+              <span role="img" aria-label="Photomosaic">🟦</span>
+              Photomosaic
+            </a>
+            <a
+              href={process.env.NEXT_PUBLIC_KARAOKE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-pink-700 bg-pink-50 hover:bg-pink-100 font-medium transition"
+            >
+              <span role="img" aria-label="Karaoke">🎤</span>
+              Karaoke
+            </a>
+            <a
+              href={process.env.NEXT_PUBLIC_QUIZZ_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-medium transition"
+            >
+              <span role="img" aria-label="Quizz">❓</span>
+              Quizz
+            </a>
+            <a
+              href={process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-green-700 bg-green-50 hover:bg-green-100 font-medium transition"
+            >
+              <span role="img" aria-label="Roue">🎡</span>
+              Roue de la Fortune
+            </a>
+            <a
+              href={process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 font-medium transition"
+            >
+              <span role="img" aria-label="Fresque">🖼️</span>
+              Fresque animée
+            </a>
+          </div>
         </nav>
       </div>
 

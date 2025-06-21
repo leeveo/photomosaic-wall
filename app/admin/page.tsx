@@ -11,7 +11,7 @@ import FlyerGenerator from '@/components/FlyerGenerator'
 import PhotoBoothCustomizer from '@/components/PhotoBoothCustomizer'
 import PhotosTab from '@/components/PhotosTab'
 import UserProfileMenu from '@/components/UserProfileMenu'
-import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit } from 'react-icons/fi'
+import { FiGrid, FiImage, FiBarChart2, FiPlusCircle, FiCamera, FiEdit, FiExternalLink, FiMusic, FiHelpCircle, FiRotateCcw, FiFilm } from 'react-icons/fi'
 import Link from 'next/link'
 import { useQRCode } from 'next-qrcode'
 import Image from 'next/image'
@@ -792,54 +792,59 @@ export default function AdminPage() {
             </button>
           ))}
           {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
-          <hr className="my-6 border-gray-200" />
-          <div className="flex flex-col gap-2 px-6">
-            <a
-              href={process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-medium transition"
-            >
-              <span role="img" aria-label="Photomosaic">🟦</span>
-              Photomosaic
-            </a>
-            <a
-              href={process.env.NEXT_PUBLIC_KARAOKE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-pink-700 bg-pink-50 hover:bg-pink-100 font-medium transition"
-            >
-              <span role="img" aria-label="Karaoke">🎤</span>
-              Karaoke
-            </a>
-            <a
-              href={process.env.NEXT_PUBLIC_QUIZZ_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-yellow-700 bg-yellow-50 hover:bg-yellow-100 font-medium transition"
-            >
-              <span role="img" aria-label="Quizz">❓</span>
-              Quizz
-            </a>
-            <a
-              href={process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-green-700 bg-green-50 hover:bg-green-100 font-medium transition"
-            >
-              <span role="img" aria-label="Roue">🎡</span>
-              Roue de la Fortune
-            </a>
-            <a
-              href={process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100 font-medium transition"
-            >
-              <span role="img" aria-label="Fresque">🖼️</span>
-              Fresque animée
-            </a>
+          <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">
+            <FiExternalLink className="w-4 h-4" />
+            Applications externes
           </div>
+          <div className="flex flex-col gap-3 px-4">
+            {/*
+              {
+                label: 'Photo mosaique',
+                url: process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL,
+                icon: <FiGrid className="w-5 h-5" />,
+                color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
+              },
+              {
+                label: 'Karaoke',
+                url: process.env.NEXT_PUBLIC_KARAOKE_URL,
+                icon: <FiMusic className="w-5 h-5" />,
+                color: 'bg-pink-100 text-pink-700 border-pink-300',
+              },
+              {
+                label: 'Quizz',
+                url: process.env.NEXT_PUBLIC_QUIZZ_URL,
+                icon: <FiHelpCircle className="w-5 h-5" />,
+                color: 'bg-green-100 text-green-700 border-green-300',
+              },
+              {
+                label: 'Roue de la fortune',
+                url: process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL,
+                icon: <FiRotateCcw className="w-5 h-5" />,
+                color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+              },
+              {
+                label: 'Fresque animée',
+                url: process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL,
+                icon: <FiFilm className="w-5 h-5" />,
+                color: 'bg-purple-100 text-purple-700 border-purple-300',
+              },
+            */}
+            {/*
+              app.url ? (
+                <a
+                  key={app.label}
+                  href={app.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${app.color} shadow-sm hover:scale-[1.03] transition-transform`}
+                >
+                  {app.icon}
+                  <span className="font-medium">{app.label}</span>
+                </a>
+              ) : null
+            */}
+          </div>
+          <hr className="my-6 border-gray-200 mx-4" />
         </nav>
       </div>
 

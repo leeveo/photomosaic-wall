@@ -791,56 +791,56 @@ export default function AdminPage() {
               <span className="text-sm">{label}</span>
             </button>
           ))}
+
           {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
-         <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">
-  <FiExternalLink className="w-4 h-4" />
-  Applications externes
-</div>
-<div className="flex flex-col gap-3 px-4">
-  {[
-    {
-      label: 'Photo mosaique',
-      url: process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL || 'https://photomosaic.waibooth.app',
-      icon: <FiGrid className="w-5 h-5" />,
-      color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
-    },
-    {
-      label: 'Karaoke',
-      url: process.env.NEXT_PUBLIC_KARAOKE_URL || 'https://karaoke.waibooth.app',
-      icon: <FiMusic className="w-5 h-5" />,
-      color: 'bg-pink-100 text-pink-700 border-pink-300',
-    },
-    {
-      label: 'Quizz',
-      url: process.env.NEXT_PUBLIC_QUIZZ_URL || 'https://quizz.waibooth.app',
-      icon: <FiHelpCircle className="w-5 h-5" />,
-      color: 'bg-green-100 text-green-700 border-green-300',
-    },
-    {
-      label: 'Roue de la fortune',
-      url: process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL || 'https://roue.waibooth.app',
-      icon: <FiRotateCcw className="w-5 h-5" />,
-      color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-    },
-    {
-      label: 'Fresque animée',
-      url: process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL || 'https://fresque.waibooth.app',
-      icon: <FiFilm className="w-5 h-5" />,
-      color: 'bg-purple-100 text-purple-700 border-purple-300',
-    },
-  ].map(app => (
-    <a
-      key={app.label}
-      href={app.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${app.color} shadow-sm hover:scale-[1.03] transition-transform`}
-    >
-      {app.icon}
-      <span className="font-medium">{app.label}</span>
-    </a>
-  ))}
-</div>
+          <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">
+            <FiExternalLink className="w-4 h-4" />
+            Applications externes
+          </div>          <div className="flex flex-col gap-3 px-4">
+            {[
+              {
+                label: 'Photo mosaique',
+                url: process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL || 'https://photomosaic.waibooth.app',
+                icon: <FiGrid className="w-5 h-5" />,
+                color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
+              },
+              {
+                label: 'Karaoke',
+                url: process.env.NEXT_PUBLIC_KARAOKE_URL || 'https://karaoke.waibooth.app',
+                icon: <FiMusic className="w-5 h-5" />,
+                color: 'bg-pink-100 text-pink-700 border-pink-300',
+              },
+              {
+                label: 'Quizz',
+                url: process.env.NEXT_PUBLIC_QUIZZ_URL || 'https://quizz.waibooth.app',
+                icon: <FiHelpCircle className="w-5 h-5" />,
+                color: 'bg-green-100 text-green-700 border-green-300',
+              },
+              {
+                label: 'Roue de la fortune',
+                url: process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL || 'https://roue.waibooth.app',
+                icon: <FiRotateCcw className="w-5 h-5" />,
+                color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
+              },
+              {
+                label: 'Fresque animée',
+                url: process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL || 'https://fresque.waibooth.app',
+                icon: <FiFilm className="w-5 h-5" />,
+                color: 'bg-purple-100 text-purple-700 border-purple-300',
+              }
+            ].map(app => (
+              <a
+                key={app.label}
+                href={app.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${app.color} shadow-sm hover:scale-[1.03] transition-transform`}
+              >
+                {app.icon}
+                <span className="font-medium">{app.label}</span>
+              </a>
+            ))}
+          </div>
 
       {/* Backdrop overlay for mobile */}
       {isSidebarOpen && (

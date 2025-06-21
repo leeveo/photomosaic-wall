@@ -746,8 +746,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Sidebar - responsive */}
-      <div
+      {/* Sidebar - responsive */}      <div
         className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
@@ -838,9 +837,9 @@ export default function AdminPage() {
               >
                 {app.icon}
                 <span className="font-medium">{app.label}</span>              </a>
-            ))}
-          </div>
+            ))}          </div>
         </nav>
+      </div>
 
       {/* Backdrop overlay for mobile */}
       {isSidebarOpen && (

@@ -11,7 +11,8 @@ export default async function AdminLayout({
 
   try {
     const cookieStore = await cookies();
-    const token = cookieStore.get('shared_auth_token')?.value;
+    // Essaye d'abord shared_auth_token, puis admin_session
+    const token = cookieStore.get('shared_auth_token')?.value || cookieStore.get('admin_session')?.value;
 
     if (token) {
       try {
@@ -19,7 +20,7 @@ export default async function AdminLayout({
         const userData = JSON.parse(decoded);
         userId = userData.userId;
         if (userId) {
-          console.log('Admin layout - UserId from shared_auth_token:', userId);
+          console.log('Admin layout - UserId from token:', userId);
         } else {
           console.log('Admin layout - Token present but userId missing:', userData);
         }
@@ -27,7 +28,7 @@ export default async function AdminLayout({
         console.log('Admin layout - Failed to decode token:', e);
       }
     } else {
-      console.log('Admin layout - No shared_auth_token found');
+      console.log('Admin layout - No shared_auth_token or admin_session found');
     }
   } catch (error) {
     console.log('Admin layout - Error reading cookies:', error);

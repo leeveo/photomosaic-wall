@@ -742,10 +742,10 @@ export default function AdminPage() {
       url.searchParams.delete('bypass');
       window.history.replaceState({}, document.title, url.toString());
     }
-  }, []);
-
-  return (
-    <div className="flex h-screen bg-gray-100">      {/* Sidebar - responsive */}      <div
+  }, []);  return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar - responsive */}
+      <div
         className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
@@ -798,15 +798,17 @@ export default function AdminPage() {
                   }`}
                 >
                   {icon}
-                  <span className="text-sm">{label}</span>
-                </button>
+                  <span className="text-sm">{label}</span>                </button>
               ))}
+            </div>
+          </div>
 
           {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
           <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">
             <FiExternalLink className="w-4 h-4" />
             Applications externes
-          </div>          <div className="flex flex-col gap-3 px-4">
+          </div>
+          <div className="flex flex-col gap-3 px-4">
             {[
               {
                 label: 'Photo mosaique',
@@ -847,8 +849,10 @@ export default function AdminPage() {
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${app.color} shadow-sm hover:scale-[1.03] transition-transform`}
               >
                 {app.icon}
-                <span className="font-medium">{app.label}</span>              </a>
-            ))}          </div>
+                <span className="font-medium">{app.label}</span>
+              </a>
+            ))}
+          </div>
         </nav>
       </div>
 

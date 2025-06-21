@@ -75,10 +75,14 @@ export async function middleware(req: NextRequest) {
       const userId = adminSession.userId;
 
       if (userId) {
-        const newSharedToken = await generateSharedToken(userId);
-        if (newSharedToken) {
-          setSharedAuthCookie(res, newSharedToken);
-        }
+        // Générer le token partagé ici (copie locale de la fonction)
+        const payload = {
+          userId,
+          timestamp: Date.now(),
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
+        };
+        const newSharedToken = Buffer.from(JSON.stringify(payload)).toString('base64');
+        setSharedAuthCookie(res, newSharedToken);
       }
     } catch (error) {
       console.error('Erreur lors de la création du token partagé:', error);

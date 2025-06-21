@@ -86,19 +86,15 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
       <button
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="flex items-center space-x-2 focus:outline-none"
-        aria-expanded={isMenuOpen}
-        aria-haspopup="true"
       >
-        <div 
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-          style={{ backgroundColor: avatarColor }}
-        >
-          {userInitial}
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md hover:shadow-lg transition-all duration-200 border-2 border-white">
+          <span className="text-lg font-semibold">{(emailFromDb || email).charAt(0).toUpperCase()}</span>
         </div>
-        <span className="hidden md:block text-sm font-medium text-gray-700 truncate max-w-[150px]">
-          {emailFromDb || email}
-        </span>
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="hidden md:flex flex-col items-start">
+          <span className="text-sm font-medium text-gray-700">Mon compte</span>
+          <span className="text-xs text-gray-500 truncate max-w-[120px]">{emailFromDb || email}</span>
+        </div>
+        <svg className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : 'rotate-0'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -116,7 +112,6 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
               href="/api/auth/logout"
               className="flex w-full items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
             >
-              {/* Remplace FiLogOut par une icône SVG inline si tu ne veux pas importer react-icons */}
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2h4a2 2 0 012 2v1" /></svg>
               <span>Déconnexion</span>
             </a>

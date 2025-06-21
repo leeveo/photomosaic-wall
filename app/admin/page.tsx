@@ -745,18 +745,16 @@ export default function AdminPage() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar - responsive */}      <div
+    <div className="flex h-screen bg-gray-100">      {/* Sidebar - responsive */}      <div
         className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
+        } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
       >
-        <div className="p-6">
-          <h1 className="text-2xl font-semibold text-indigo-600">Fillow.</h1>
-          <p className="text-sm text-gray-500">Administration</p>
+        <div className="p-6 border-b border-gray-100">
+          <h1 className="text-2xl font-semibold text-indigo-600 text-center">WaiBooth.app</h1>
+          <p className="text-sm text-purple-600 font-bold italic text-center">"Automatisez la magie.<br/> Laissez Waibooth gérer le show."</p>
         </div>
         <nav className="mt-6 flex flex-col gap-2 text-sm">
-          {/* Close button for mobile */}
           <div className="px-6 py-2 lg:hidden">
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -765,31 +763,44 @@ export default function AdminPage() {
               <span className="text-sm">Fermer le menu</span>
             </button>
           </div>
-          {/* Main navigation items */}
-          {[
-            { label: 'Dashboard', icon: <FiGrid />, tab: 'projects' },
-            { label: 'Créer Projet', icon: <FiPlusCircle />, tab: 'setup' },
-            { label: 'Photos', icon: <FiImage />, tab: 'photos' },
-            { label: 'Stats', icon: <FiBarChart2 />, tab: 'stats' },
-            { label: 'Flyer', icon: <FiCamera />, tab: 'flyer' },
-            { label: 'Design', icon: <FiEdit />, tab: 'design' },
-          ].map(({ label, icon, tab }) => (
+          
+          <div className="mx-4 my-2 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-inner p-2">
             <button
-              key={tab}
-              onClick={() => {
-                setIsSidebarOpen(false)
-                setActiveTab(tab as 'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design')
-              }}
-              className={`flex items-center gap-2 px-6 py-3 rounded-md w-full justify-start ${
-                activeTab === tab
-                  ? 'bg-indigo-50 text-indigo-600 font-semibold'
-                  : 'text-gray-700 hover:bg-indigo-50'
-              }`}
+              type="button"
+              className="w-full px-4 py-2 font-bold text-gray-700 flex items-center gap-2 focus:outline-none"
+              onClick={() => setPhotoboothOpen ? setPhotoboothOpen(!photoboothOpen) : null}
             >
-              {icon}
-              <span className="text-sm">{label}</span>
+              <svg className="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              Mosaïque
             </button>
-          ))}
+            <div className="flex flex-col transition-all duration-200 overflow-hidden max-h-96 opacity-100">
+              {/* Main navigation items */}
+              {[
+                { label: 'Dashboard', icon: <FiGrid />, tab: 'projects' },
+                { label: 'Créer Projet', icon: <FiPlusCircle />, tab: 'setup' },
+                { label: 'Photos', icon: <FiImage />, tab: 'photos' },
+                { label: 'Stats', icon: <FiBarChart2 />, tab: 'stats' },
+                { label: 'Flyer', icon: <FiCamera />, tab: 'flyer' },
+                { label: 'Design', icon: <FiEdit />, tab: 'design' },
+              ].map(({ label, icon, tab }) => (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setIsSidebarOpen(false)
+                    setActiveTab(tab as 'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design')
+                  }}
+                  className={`flex items-center gap-3 px-8 py-2 mx-2 my-1 rounded-lg transition-all duration-150 ${
+                    activeTab === tab
+                      ? 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 font-semibold shadow'
+                      : 'text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 hover:shadow'
+                  }`}
+                >
+                  {icon}
+                  <span className="text-sm">{label}</span>
+                </button>
+              ))}
 
           {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
           <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">

@@ -70,6 +70,7 @@ export default function AdminPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [tileToDelete, setTileToDelete] = useState<{ id: string; url: string } | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [photoboothOpen, setPhotoboothOpen] = useState(true)
   const [userEmail, setUserEmail] = useState<string>('')
 
   // Remove unused state variables
@@ -767,8 +768,7 @@ export default function AdminPage() {
           <div className="mx-4 my-2 rounded-xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 shadow-inner p-2">
             <button
               type="button"
-              className="w-full px-4 py-2 font-bold text-gray-700 flex items-center gap-2 focus:outline-none"
-              onClick={() => setPhotoboothOpen ? setPhotoboothOpen(!photoboothOpen) : null}
+              className="w-full px-4 py-2 font-bold text-gray-700 flex items-center gap-2 focus:outline-none"              onClick={() => setPhotoboothOpen(!photoboothOpen)}
             >
               <svg className="w-4 h-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

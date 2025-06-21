@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase'; // Assure-toi que ce chemin est correct
 
 interface UserProfileMenuProps {
   email: string;
@@ -10,7 +11,46 @@ interface UserProfileMenuProps {
 export default function UserProfileMenu({ email }: UserProfileMenuProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  
+  const [userIdFromCookie, setUserIdFromCookie] = useState<string | null>(null);
+  const [emailFromDb, setEmailFromDb] = useState<string | null>(null);
+
+  // Récupère l'id utilisateur depuis le cookie au montage
+  useEffect(() => {
+    try {
+      const cookies = document.cookie.split(';').map(c => c.trim());
+      const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='));
+      if (tokenCookie) {
+        const token = tokenCookie.split('=')[1];
+        const decoded = atob(token);
+        const userData = JSON.parse(decoded);
+        if (userData.userId) {
+          setUserIdFromCookie(userData.userId);
+        }
+      }
+    } catch (e) {
+      setUserIdFromCookie(null);
+    }
+  }, []);
+
+  // Va chercher l'email dans Supabase si userId trouvé
+  useEffect(() => {
+    const fetchEmail = async () => {
+      if (userIdFromCookie) {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('email')
+          .eq('id', userIdFromCookie)
+          .single();
+        if (data && data.email) {
+          setEmailFromDb(data.email);
+        } else {
+          setEmailFromDb(null);
+        }
+      }
+    };
+    fetchEmail();
+  }, [userIdFromCookie]);
+
   // Close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -56,7 +96,7 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
           {userInitial}
         </div>
         <span className="hidden md:block text-sm font-medium text-gray-700 truncate max-w-[150px]">
-          {email}
+          {emailFromDb || email}
         </span>
         <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -67,27 +107,9 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-medium text-gray-900">Connecté en tant que</p>
-            <p className="text-sm text-gray-500 truncate">{email}</p>
-            {/* Affiche l'ID utilisateur si disponible dans le cookie global */}
-            {typeof window !== 'undefined' && (
-              (() => {
-                try {
-                  // Cherche le cookie admin_session ou shared_auth_token
-                  const cookies = document.cookie.split(';').map(c => c.trim());
-                  const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='));
-                  if (tokenCookie) {
-                    const token = tokenCookie.split('=')[1];
-                    const decoded = atob(token);
-                    const userData = JSON.parse(decoded);
-                    if (userData.userId) {
-                      return <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userData.userId}</span></p>;
-                    }
-                  }
-                } catch (e) {
-                  // ignore
-                }
-                return null;
-              })()
+            <p className="text-sm text-gray-500 truncate">{emailFromDb || email}</p>
+            {userIdFromCookie && (
+              <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromCookie}</span></p>
             )}
           </div>
           <Link href="/admin" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">

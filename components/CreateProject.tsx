@@ -109,9 +109,81 @@ export default function CreateProject() {
     drawGridPreview()
   }, [drawGridPreview])
 
+  // Add this function to validate and format slug
+  const validateSlug = (input: string): string => {
+    // Replace spaces and special characters with hyphens
+    let formatted = input.toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters except hyphens
+      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+      .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
+    
+    // Ensure the slug doesn't start or end with a hyphen
+    formatted = formatted.replace(/^-+|-+$/g, '');
+    
+    // If empty after cleaning, use a default
+    if (!formatted) {
+      formatted = 'projet-' + Date.now().toString().slice(-6);
+    }
+    
+    return formatted;
+  };
+
+  // Modify the slug input handler to validate automatically
+  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSlug(validateSlug(e.target.value));
+  };
+
+  // Add this function to check if the user has the appropriate permissions
+  const checkPermissions = async () => {
+    try {
+      // Test write access to projects table
+      const { error: projectError } = await supabase
+        .from('projects')
+        .select('count')
+        .limit(1);
+      
+      if (projectError) {
+        console.error('Database permission issue:', projectError);
+        return false;
+      }
+      
+      // Test write access to storage
+      const testBlob = new Blob(['test'], { type: 'text/plain' });
+      const testFileName = `permission-test-${Date.now()}.txt`;
+      
+      const { error: storageError } = await supabase.storage
+        .from('backgrounds')
+        .upload(testFileName, testBlob, {
+          cacheControl: '3600',
+          upsert: true
+        });
+        
+      if (storageError) {
+        console.error('Storage permission issue:', storageError);
+        return false;
+      }
+      
+      // Clean up test file
+      await supabase.storage
+        .from('backgrounds')
+        .remove([testFileName]);
+        
+      return true;
+    } catch (err) {
+      console.error('Error checking permissions:', err);
+      return false;
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Validate that slug exists
+    if (!slug) {
+      alert('Veuillez d\'abord définir un identifiant (slug) pour le projet');
+      return;
+    }
 
     const reader = new FileReader()
     reader.onload = () => {
@@ -135,11 +207,18 @@ export default function CreateProject() {
         setImageSize({ width: canvas.width, height: canvas.height })
 
         try {
-          // Upload the image to Supabase storage
-          const filename = `${slug}-${Date.now()}.jpg`
+          // Create a unique and sanitized filename
+          const safeSlug = validateSlug(slug);
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substring(2, 8);
+          const filename = `${safeSlug}-${timestamp}-${randomString}.jpg`;
           
           // First, try to create a Blob from the compressed data URL
-          const blobData = await fetch(compressed).then(r => r.blob())
+          const blobData = await fetch(compressed).then(r => r.blob());
+          
+          // Log the upload attempt
+          console.log('Attempting to upload:', filename);
+          console.log('File size:', Math.round(blobData.size / 1024), 'KB');
           
           const { data, error } = await supabase.storage
             .from('backgrounds')
@@ -147,30 +226,30 @@ export default function CreateProject() {
               cacheControl: '3600',
               upsert: true,
               contentType: 'image/jpeg'
-            })
+            });
 
           if (error) {
-            console.error('Upload error:', error)
+            console.error('Upload error details:', error);
             // Continue anyway as we already have the local preview
-            console.log('Using local preview only due to upload error')
+            console.log('Using local preview only due to upload error');
           } else {
-            console.log('Upload successful:', data)
+            console.log('Upload successful:', data);
             
             // Get the public URL of the uploaded file
             const { data: urlData } = supabase.storage
               .from('backgrounds')
-              .getPublicUrl(filename)
+              .getPublicUrl(filename);
 
             if (urlData?.publicUrl) {
-              console.log('Public URL:', urlData.publicUrl)
+              console.log('Public URL:', urlData.publicUrl);
               // We can keep using the compressed local preview
               // or use the URL if needed
             }
           }
         } catch (err) {
-          console.error('Error during upload process:', err)
+          console.error('Error during upload process:', err);
           // Fallback to local preview only
-          console.log('Using local preview only due to upload process error')
+          console.log('Using local preview only due to upload process error');
         }
       }
     }
@@ -249,20 +328,52 @@ export default function CreateProject() {
       alert('Veuillez remplir le nom et le slug du projet.');
       return false;
     }
-    // Vérifier si le projet existe déjà
-    const existing = await supabase.from('projects').select().eq('slug', slug).maybeSingle();
-    if (existing.data) {
+    
+    try {
+      console.log('Checking if project exists:', slug);
+      // Vérifier si le projet existe déjà
+      const { data: existing, error: existingError } = await supabase
+        .from('projects')
+        .select('slug')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (existingError) {
+        console.error('Error checking existing project:', existingError);
+        alert(`Erreur lors de la vérification du projet: ${existingError.message}`);
+        return false;
+      }
+
+      if (existing) {
+        console.log('Project already exists:', existing);
+        setProjectCreated(true);
+        return true; // Le projet existe déjà
+      }
+
+      console.log('Creating new project:', { slug, title });
+      // Créer le projet
+      const { error: insertError } = await supabase
+        .from('projects')
+        .insert([{ 
+          slug, 
+          title,
+          created_at: new Date().toISOString() 
+        }]);
+
+      if (insertError) {
+        console.error('Error creating project:', insertError);
+        alert(`Erreur création projet: ${insertError.message}`);
+        return false;
+      }
+
+      console.log('Project created successfully');
       setProjectCreated(true);
-      return true; // Le projet existe déjà
-    }
-    // Créer le projet
-    const { error: errProject } = await supabase.from('projects').insert([{ slug, title }]);
-    if (errProject) {
-      alert('Erreur création projet');
+      return true;
+    } catch (err) {
+      console.error('Unexpected error creating project:', err);
+      alert('Une erreur inattendue s\'est produite lors de la création du projet.');
       return false;
     }
-    setProjectCreated(true);
-    return true;
   };
 
   const handleCreate = async () => {
@@ -408,7 +519,7 @@ export default function CreateProject() {
                   <input
                     className="w-full border border-blue-200 bg-white rounded-lg px-10 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
+                    onChange={handleSlugChange}
                     placeholder="identifiant-unique-sans-espaces"
                   />
                 </div>
@@ -472,7 +583,7 @@ export default function CreateProject() {
                   ) : (
                     <div className="h-16 w-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-400">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                   )}
@@ -603,7 +714,7 @@ export default function CreateProject() {
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-semibold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     Aperçu du découpage
                   </h4>

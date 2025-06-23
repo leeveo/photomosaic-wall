@@ -7,6 +7,8 @@ import Modal from './Modal'
 import PhotoBoothCustomizer from './PhotoBoothCustomizer'
 import FlyerGenerator from './FlyerGenerator'
 import Image from 'next/image'
+import { TABLE_NAMES } from '@/lib/tableNames';
+import { supabaseHelpers } from '@/lib/supabase';
 
 const LABEL_FORMATS = [
   { name: '76mm x 76mm', widthMM: 76, heightMM: 76 },
@@ -333,7 +335,7 @@ export default function CreateProject() {
       console.log('Checking if project exists:', slug);
       // Vérifier si le projet existe déjà
       const { data: existing, error: existingError } = await supabase
-        .from('projects')
+        .from(TABLE_NAMES.PROJECTS)  // Use the constant instead of hardcoded string
         .select('slug')
         .eq('slug', slug)
         .maybeSingle();
@@ -353,7 +355,7 @@ export default function CreateProject() {
       console.log('Creating new project:', { slug, title });
       // Créer le projet
       const { error: insertError } = await supabase
-        .from('projects')
+        .from(TABLE_NAMES.PROJECTS)  // Use the constant here too
         .insert([{ 
           slug, 
           title,
@@ -389,7 +391,7 @@ export default function CreateProject() {
     }
 
     // Nettoyer les setups précédents
-    await supabase.from('setups').delete().eq('project_slug', slug);
+    await supabase.from(TABLE_NAMES.SETUPS).delete().eq('project_slug', slug);
 
     // Collecter toutes les données personnalisées
     const setupData = collectCustomizedData();

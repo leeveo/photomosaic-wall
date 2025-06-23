@@ -1,6 +1,8 @@
--- This allows any operation by anyone on the projects table
-CREATE POLICY "Allow all operations on projects"
-ON projects
+-- Enable RLS and allow any operation by anyone on the projectsmosaic table
+ALTER TABLE projectsmosaic ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations on projectsmosaic"
+ON projectsmosaic
 FOR ALL
 USING (true)
 WITH CHECK (true);

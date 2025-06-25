@@ -269,24 +269,8 @@ export default function CreateProject() {
       cols,
       event_date: eventDate,
       label_format: JSON.stringify(selectedFormat), // Store the selected label format
-      
-      // Flyer customization data
-      flyer_title: flyerTitle,
-      flyer_subtitle: flyerSubtitle,
-      flyer_title_color: flyerTitleColor,
-      flyer_title_size: flyerTitleSize,
-      flyer_title_font: flyerTitleFont,
-      flyer_title_position: flyerTitlePosition,
-      flyer_subtitle_color: flyerSubtitleColor,
-      flyer_subtitle_size: flyerSubtitleSize,
-      flyer_subtitle_font: flyerSubtitleFont,
-      flyer_subtitle_position: flyerSubtitlePosition,
-      flyer_qr_code_position: flyerQrCodePosition,
-      flyer_background: flyerBackground,
-      flyer_background_image: flyerBackgroundImage,
-      flyer_background_blur: flyerBackgroundBlur,
-      
-      // PhotoBooth customization data
+
+      // PhotoBooth customization data (keep only these for setups)
       booth_background_color: boothBackgroundColor,
       booth_background_image: boothBackgroundImage,
       booth_button_color: boothButtonColor,
@@ -799,7 +783,11 @@ export default function CreateProject() {
   return (
     <div className="space-y-8">
       {/* Header gradient */}
-      <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
+      <div className="      -- Allow all inserts (for development)
+      CREATE POLICY "Allow all inserts"
+        ON setups
+        FOR INSERT
+        WITH CHECK (true); mb-2">
         <h2 className="text-3xl font-bold mb-2">➕ Créer un nouveau projet</h2>
         <p className="text-white text-opacity-80">Configurez un nouveau mur mosaïque photo pour votre événement.</p>
       </div>
@@ -1125,7 +1113,7 @@ function GridReference({
             <div className="flex items-center p-3 bg-white rounded-lg shadow-sm border border-blue-50">
               <div className="h-10 w-10 rounded-full bg-pink-100 flex items-center justify-center mr-3">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <div>

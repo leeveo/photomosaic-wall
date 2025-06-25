@@ -322,24 +322,30 @@ export default function CreateProject() {
 
   // Modifie la fonction pour obtenir l'id utilisateur depuis le cookie partagé si besoin
   const getCurrentAdminUserId = async (): Promise<string | null> => {
-    // 1. Essayer via Supabase Auth
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user?.email) {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('id')
-        .eq('email', user.email)
-        .maybeSingle();
-      if (!error && data) return data.id;
-    }
-    // 2. Sinon, essayer via le cookie partagé
-    const sharedToken = getCookie('shared_auth_token');
+    // 1. Essayer via le cookie partagé (shared_auth_token) EN PREMIER
+    const sharedToken = typeof document !== 'undefined' ? getCookie('shared_auth_token') : null;
     if (sharedToken) {
       try {
-        const decoded = JSON.parse(atob(sharedToken));
+        // Certains navigateurs encodent le cookie en base64url, donc on remplace -_/ par +/
+        let base64 = sharedToken.replace(/-/g, '+').replace(/_/g, '/');
+        // Ajoute les padding si besoin
+        while (base64.length % 4 !== 0) base64 += '=';
+        const decoded = JSON.parse(atob(base64));
         if (decoded.userId) return decoded.userId;
       } catch (e) {
         // ignore
+      }
+    }
+    // 2. Sinon, essayer via Supabase Auth
+    if (typeof window !== 'undefined') {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data, error } = await supabase
+          .from('admin_users')
+          .select('id')
+          .eq('email', user.email)
+          .maybeSingle();
+        if (!error && data) return data.id;
       }
     }
     return null;

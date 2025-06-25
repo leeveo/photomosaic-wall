@@ -310,55 +310,76 @@ export default function CreateProject() {
     setBoothStep3Text(data.stepTexts.step3);
   };
 
-  // Nouvelle fonction pour créer le projet (projects) uniquement
-  const handleCreateProjectOnly = async () => {
+  // Ajout: fonction pour obtenir l'id de l'utilisateur courant (admin_users)
+  const getCurrentAdminUserId = async (): Promise<string | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.email) return null;
+    // Chercher l'utilisateur dans admin_users par email
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.id;
+  };
+
+  // Nouvelle fonction pour créer le projet dans projectsmosaic
+  const handleCreateProjectMosaic = async () => {
     if (!slug || !title) {
       alert('Veuillez remplir le nom et le slug du projet.');
       return false;
     }
-    
+
     try {
-      console.log('Checking if project exists:', slug);
-      // Vérifier si le projet existe déjà
+      // Vérifier si le projet existe déjà dans projectsmosaic
       const { data: existing, error: existingError } = await supabase
-        .from(TABLE_NAMES.PROJECTS)  // Use the constant instead of hardcoded string
+        .from('projectsmosaic')
         .select('slug')
         .eq('slug', slug)
         .maybeSingle();
 
       if (existingError) {
-        console.error('Error checking existing project:', existingError);
+        console.error('Error checking existing projectsmosaic:', existingError);
         alert(`Erreur lors de la vérification du projet: ${existingError.message}`);
         return false;
       }
 
       if (existing) {
-        console.log('Project already exists:', existing);
         setProjectCreated(true);
         return true; // Le projet existe déjà
       }
 
-      console.log('Creating new project:', { slug, title });
-      // Créer le projet
+      // Récupérer l'id de l'utilisateur courant
+      const created_by = await getCurrentAdminUserId();
+      if (!created_by) {
+        alert("Impossible de récupérer l'utilisateur courant.");
+        return false;
+      }
+
+      // Créer le projet dans projectsmosaic
       const { error: insertError } = await supabase
-        .from(TABLE_NAMES.PROJECTS)  // Use the constant here too
-        .insert([{ 
-          slug, 
+        .from('projectsmosaic')
+        .insert([{
+          slug,
           title,
-          created_at: new Date().toISOString() 
+          rows,
+          cols,
+          image: localPreview,
+          created_by,
+          created_at: new Date().toISOString()
         }]);
 
       if (insertError) {
-        console.error('Error creating project:', insertError);
+        console.error('Error creating projectsmosaic:', insertError);
         alert(`Erreur création projet: ${insertError.message}`);
         return false;
       }
 
-      console.log('Project created successfully');
       setProjectCreated(true);
       return true;
     } catch (err) {
-      console.error('Unexpected error creating project:', err);
+      console.error('Unexpected error creating projectsmosaic:', err);
       alert('Une erreur inattendue s\'est produite lors de la création du projet.');
       return false;
     }
@@ -372,7 +393,7 @@ export default function CreateProject() {
 
     // S'assurer que le projet existe (sécurité)
     if (!projectCreated) {
-      const ok = await handleCreateProjectOnly();
+      const ok = await handleCreateProjectMosaic();
       if (!ok) return;
     }
 
@@ -406,7 +427,7 @@ export default function CreateProject() {
     // Si on passe de l'étape 0 à 1, il faut s'assurer que le projet existe AVANT d'aller plus loin
     if (step === 0) {
       // Créer le projet si pas déjà fait
-      const ok = await handleCreateProjectOnly();
+      const ok = await handleCreateProjectMosaic();
       if (!ok) return;
       setStep(1);
     } 

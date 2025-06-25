@@ -783,11 +783,7 @@ export default function CreateProject() {
   return (
     <div className="space-y-8">
       {/* Header gradient */}
-      <div className="      -- Allow all inserts (for development)
-      CREATE POLICY "Allow all inserts"
-        ON setups
-        FOR INSERT
-        WITH CHECK (true); mb-2">
+      <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
         <h2 className="text-3xl font-bold mb-2">➕ Créer un nouveau projet</h2>
         <p className="text-white text-opacity-80">Configurez un nouveau mur mosaïque photo pour votre événement.</p>
       </div>

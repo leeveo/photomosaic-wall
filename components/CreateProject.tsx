@@ -994,7 +994,7 @@ function GridReference({
     }
   }, [generatePrintablePlan, image]);
 
-  // Fix: Return a single root element (e.g. a <div>)
+  // Fix: Only return a single root element (no extra comments or code outside the <div>)
   return (
     <div className="space-y-6 max-w-full">
       {/* Cell reference mini-grid preview */}
@@ -1052,8 +1052,6 @@ function GridReference({
           </div>
         </div>
       </div>
-      
-      {/* Preview of generated plan */}
       {generatedPreview && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
@@ -1073,8 +1071,6 @@ function GridReference({
           </div>
         </div>
       )}
-      
-      {/* Dimension info */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3">
           <h4 className="font-semibold text-white flex items-center">
@@ -1133,8 +1129,7 @@ function GridReference({
             </div>
           </div>
         </div>
-      
-      {/* Buttons for plan management */}
+      </div>
       <div className="flex flex-col gap-4">
         <button
           className="relative px-6 py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-xl shadow-lg hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 transition flex items-center justify-center font-semibold group overflow-hidden"
@@ -1159,7 +1154,6 @@ function GridReference({
             </>
           )}
         </button>
-        
         <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200 shadow-md">
           <div className="flex items-start mb-3">
             <div className="bg-amber-100 rounded-full p-1 mr-3">
@@ -1185,14 +1179,10 @@ function GridReference({
           </ul>
         </div>
       </div>
-      
-      {/* Hidden canvas for generating the printable plan */}
       <canvas 
         ref={canvasRef} 
         className="hidden"
       />
-      
-      {/* Custom scrollbar styles */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {
           height: 6px;

@@ -311,17 +311,38 @@ export default function CreateProject() {
   };
 
   // Ajout: fonction pour obtenir l'id de l'utilisateur courant (admin_users)
+  // Ajout: fonction utilitaire pour lire le cookie côté client
+  function getCookie(name: string): string | null {
+    if (typeof document === 'undefined') return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    return null;
+  }
+
+  // Modifie la fonction pour obtenir l'id utilisateur depuis le cookie partagé si besoin
   const getCurrentAdminUserId = async (): Promise<string | null> => {
+    // 1. Essayer via Supabase Auth
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) return null;
-    // Chercher l'utilisateur dans admin_users par email
-    const { data, error } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('email', user.email)
-      .maybeSingle();
-    if (error || !data) return null;
-    return data.id;
+    if (user?.email) {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+      if (!error && data) return data.id;
+    }
+    // 2. Sinon, essayer via le cookie partagé
+    const sharedToken = getCookie('shared_auth_token');
+    if (sharedToken) {
+      try {
+        const decoded = JSON.parse(atob(sharedToken));
+        if (decoded.userId) return decoded.userId;
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
   };
 
   // Nouvelle fonction pour créer le projet dans projectsmosaic

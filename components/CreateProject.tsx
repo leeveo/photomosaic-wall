@@ -9,6 +9,7 @@ import FlyerGenerator from './FlyerGenerator'
 import Image from 'next/image'
 import { TABLE_NAMES } from '@/lib/tableNames';
 import { supabaseHelpers } from '@/lib/supabase';
+import { useRouter } from 'next/navigation'
 
 const LABEL_FORMATS = [
   { name: '76mm x 76mm', widthMM: 76, heightMM: 76 },
@@ -59,6 +60,7 @@ export default function CreateProject() {
   const [boothStep3Text, setBoothStep3Text] = useState('Voici votre photo, voulez-vous la valider ?')
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const router = useRouter();
 
   useEffect(() => {
     if (!imageSize || !selectedFormat) return
@@ -392,6 +394,11 @@ export default function CreateProject() {
     setGrid(rows, cols);
     setIsModalOpen(true);
     setStep(1);
+
+    // Redirection vers la page admin/dashboard après succès
+    setTimeout(() => {
+      router.push('/admin'); // ou '/dashboard' selon votre route
+    }, 1200); // Laisse le temps d'afficher le modal de succès
   };
 
   // Save data for current step before moving to next step
@@ -835,12 +842,18 @@ export default function CreateProject() {
       </div>
 
       {/* Modal for success message */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      <Modal isOpen={isModalOpen} onClose={() => {
+        setIsModalOpen(false);
+        router.push('/admin'); // ou '/dashboard'
+      }}>
         <div className="text-center">
           <h3 className="text-2xl font-bold text-purple-700 mb-4">✅ Projet créé avec succès !</h3>
           <p className="text-gray-600">Votre projet a été créé et est prêt à être utilisé.</p>
           <button
-            onClick={() => setIsModalOpen(false)}
+            onClick={() => {
+              setIsModalOpen(false);
+              router.push('/admin'); // ou '/dashboard'
+            }}
             className="mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow"
           >
             OK
@@ -1119,7 +1132,6 @@ function GridReference({
             </div>
           </div>
         </div>
-      </div>
       
       {/* Buttons for plan management */}
       <div className="flex flex-col gap-4">

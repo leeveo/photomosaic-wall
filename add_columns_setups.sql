@@ -6,7 +6,13 @@ ALTER TABLE setups
   ADD COLUMN IF NOT EXISTS booth_button_color text,
   ADD COLUMN IF NOT EXISTS booth_step1_text text,
   ADD COLUMN IF NOT EXISTS booth_step2_text text,
-  ADD COLUMN IF NOT EXISTS booth_step3_text text;
+  ADD COLUMN IF NOT EXISTS booth_step3_text text,
+  ADD COLUMN IF NOT EXISTS label_format text,
+  ADD COLUMN IF NOT EXISTS title text,
+  ADD COLUMN IF NOT EXISTS image text,
+  ADD COLUMN IF NOT EXISTS rows integer,
+  ADD COLUMN IF NOT EXISTS cols integer,
+  ADD COLUMN IF NOT EXISTS event_date date;
 
 -- Policies for table designs
 ALTER TABLE designs ENABLE ROW LEVEL SECURITY;

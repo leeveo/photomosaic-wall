@@ -994,6 +994,7 @@ function GridReference({
     }
   }, [generatePrintablePlan, image]);
 
+  // Fix: Return a single root element (e.g. a <div>)
   return (
     <div className="space-y-6 max-w-full">
       {/* Cell reference mini-grid preview */}
@@ -1052,7 +1053,7 @@ function GridReference({
         </div>
       </div>
       
-      {/* Preview of generated plan (if available) */}
+      {/* Preview of generated plan */}
       {generatedPreview && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">

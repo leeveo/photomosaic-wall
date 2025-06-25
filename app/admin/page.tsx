@@ -380,7 +380,7 @@ export default function AdminPage() {
     return (
       <div className="space-y-6">
         {/* Statistiques globales */}
-        <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white">
+        <div className="p-6 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl shadow-lg text-white">
           <h3 className="text-xl font-medium mb-6">Statistiques Globales</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             {/* Photos */}

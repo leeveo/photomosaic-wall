@@ -238,7 +238,7 @@ export default function PhotoPage() {
     >
       {/* Header gradient */}
       <div className="w-full max-w-xl mb-8">
-        <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white text-center">
+        <div className="p-6 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 rounded-xl shadow-lg text-white text-center">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2">📸 Photobooth – {slug}</h1>
           <p className="text-white text-opacity-80">
             Participez à la mosaïque photo de l&apos;événement !

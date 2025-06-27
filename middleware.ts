@@ -82,14 +82,18 @@ export async function middleware(req: NextRequest) {
           exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
         };
         const newSharedToken = Buffer.from(JSON.stringify(payload)).toString('base64');
-        res.cookies.set('shared_auth_token', newSharedToken, {
+        // Détection de l'environnement pour le cookie domain
+        const cookieOptions: any = {
           path: '/',
           secure: true,
           sameSite: 'lax',
           maxAge: 60 * 60 * 24 * 7,
-          domain: '.waibooth.app'
-        });
-        console.log('Cookie shared_auth_token posé sur .waibooth.app');
+        };
+        if (hostname.endsWith('.waibooth.app')) {
+          cookieOptions.domain = '.waibooth.app';
+        }
+        res.cookies.set('shared_auth_token', newSharedToken, cookieOptions);
+        console.log('Cookie shared_auth_token posé', cookieOptions);
       }
     } catch (error) {
       console.error('Erreur lors de la création du token partagé:', error);

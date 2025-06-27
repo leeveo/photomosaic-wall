@@ -85,7 +85,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const { data: projectsRaw } = await supabase.from('projects').select('slug, title, created_at')
+      // Correction : charger depuis projectsmosaic
+      const { data: projectsRaw } = await supabase.from('projectsmosaic').select('slug, title, created_at')
       if (!projectsRaw) return
 
       const enriched: MosaicMeta[] = []
@@ -104,7 +105,7 @@ export default function AdminPage() {
           title: p.title,
           createdAt: p.created_at,
           hasImage: !!setup?.image,
-          setupImage: setup?.image || null, // <-- ajoutez cette ligne
+          setupImage: setup?.image || null,
           rows: setup?.rows || 0,
           cols: setup?.cols || 0,
           tilesCount: t.length,
@@ -339,9 +340,9 @@ export default function AdminPage() {
 
   // Fonction pour charger les détails du projet depuis la base de données
   async function fetchProjectDetails(slug: string) {
-    // Récupère les infos du projet
+    // Correction : charger depuis projectsmosaic
     const { data: project } = await supabase
-      .from('projects')
+      .from('projectsmosaic')
       .select('*')
       .eq('slug', slug)
       .single()
@@ -622,7 +623,7 @@ export default function AdminPage() {
                         >
                           <span className="inline-flex items-center gap-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17a4 4 0 004-4V7a4 4 0 10-8 0v6a4 4 0 004 4z" />
                               <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10" />
                             </svg>
                             Configurer

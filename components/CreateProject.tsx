@@ -452,7 +452,7 @@ export default function CreateProject() {
     setImage(localPreview);
     setGrid(rows, cols);
     setIsModalOpen(true);
-    setStep(1);
+    // setStep(1); // <-- Supprime cette ligne pour ne pas revenir à l'étape 2
 
     // Redirection vers la page admin/dashboard après succès
     setTimeout(() => {

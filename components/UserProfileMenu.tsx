@@ -23,11 +23,13 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
       const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='));
       if (tokenCookie) {
         const token = tokenCookie.split('=')[1];
-        const decoded = atob(token);
-        const userData = JSON.parse(decoded);
+        // Correction : décoder l'URL avant atob
+        const decodedToken = decodeURIComponent(token);
+        const userData = JSON.parse(atob(decodedToken));
         if (userData.userId) {
           setUserIdFromCookie(userData.userId);
         }
+        // Correction : récupère bien l'email du cookie partagé
         if (userData.email) {
           setEmailFromCookie(userData.email);
         }
@@ -107,7 +109,7 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
         <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 transition-all duration-200 transform origin-top-right">
           <div className="p-4 border-b border-gray-100">
             <p className="text-sm text-gray-500">Connecté en tant que:</p>
-            <p className="font-medium text-gray-800 truncate">{emailFromDb || emailFromCookie || email}</p>
+            <p className="font-medium text-gray-800 truncate">{emailFromCookie || emailFromDb || email}</p>
             {userIdFromDb && (
               <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromDb}</span></p>
             )}

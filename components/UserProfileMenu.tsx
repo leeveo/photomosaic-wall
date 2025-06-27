@@ -14,6 +14,7 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
   const [userIdFromCookie, setUserIdFromCookie] = useState<string | null>(null);
   const [emailFromCookie, setEmailFromCookie] = useState<string | null>(null);
   const [emailFromDb, setEmailFromDb] = useState<string | null>(null);
+  const [userIdFromDb, setUserIdFromDb] = useState<string | null>(null);
 
   // Récupère l'id utilisateur ET l'email depuis le cookie au montage
   useEffect(() => {
@@ -37,24 +38,23 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
     }
   }, []);
 
-  // Va chercher l'email dans Supabase si userId trouvé
+  // Va chercher l'email ET l'id dans Supabase si email trouvé dans le cookie
   useEffect(() => {
-    const fetchEmail = async () => {
-      if (userIdFromCookie) {
+    const fetchUser = async () => {
+      if (emailFromCookie) {
         const { data, error } = await supabase
           .from('admin_users')
-          .select('email')
-          .eq('id', userIdFromCookie)
+          .select('id, email')
+          .eq('email', emailFromCookie)
           .single();
-        if (data && data.email) {
+        if (data && data.id) {
+          setUserIdFromDb(data.id);
           setEmailFromDb(data.email);
-        } else {
-          setEmailFromDb(null);
         }
       }
     };
-    fetchEmail();
-  }, [userIdFromCookie]);
+    fetchUser();
+  }, [emailFromCookie]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -108,8 +108,8 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
           <div className="p-4 border-b border-gray-100">
             <p className="text-sm text-gray-500">Connecté en tant que:</p>
             <p className="font-medium text-gray-800 truncate">{emailFromDb || emailFromCookie || email}</p>
-            {userIdFromCookie && (
-              <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromCookie}</span></p>
+            {userIdFromDb && (
+              <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromDb}</span></p>
             )}
           </div>
           <div className="p-2">

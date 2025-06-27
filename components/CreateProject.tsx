@@ -792,32 +792,7 @@ export default function CreateProject() {
         </div>
       )
     },
-    {
-      label: "Design",
-      content: (
-        <div className="bg-white rounded-xl shadow-md p-8">
-          <PhotoBoothCustomizer 
-            initialSlug={slug} 
-            forceSlug={slug} 
-            hideProjectSelect 
-            onDataChange={handleBoothDataUpdate}
-          />
-        </div>
-      )
-    },
-    {
-      label: "Flyer",
-      content: (
-        <div className="bg-white rounded-xl shadow-md p-8">
-          <FlyerGenerator 
-            initialSlug={slug} 
-            forceSlug={slug} 
-            hideProjectSelect 
-            onDataChange={handleFlyerDataUpdate}
-          />
-        </div>
-      )
-    }
+  
   ]
 
   // Wizard header

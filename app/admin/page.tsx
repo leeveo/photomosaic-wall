@@ -827,7 +827,7 @@ export default function AdminPage() {
                 label: 'Photobooth IA',
                 url: process.env.NEXT_PUBLIC_PHOTOBOOTH_IA_URL || 'https://photobooth.waibooth.app',
                 icon: <FiMusic className="w-5 h-5" />,
-                color: 'bg-pink-100 text-pink-700 border-pink-300',
+                color: 'bg-green-100 text-green-700 border-green-300',
               }
             ].map(app => (
               <a

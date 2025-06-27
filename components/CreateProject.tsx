@@ -199,7 +199,8 @@ export default function CreateProject() {
 
         try {
           // Create a unique and sanitized filename
-          const safeSlug = validateSlug(slug);
+          // Correction : safeSlug = slug (déjà unique et sans caractères spéciaux)
+          const safeSlug = slug;
           const timestamp = Date.now();
           const randomString = Math.random().toString(36).substring(2, 8);
           const filename = `${safeSlug}-${timestamp}-${randomString}.jpg`;

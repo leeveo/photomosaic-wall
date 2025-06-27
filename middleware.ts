@@ -100,6 +100,36 @@ export async function middleware(req: NextRequest) {
     }
   }
 
+  // Pose le cookie sur toutes les requêtes pour debug (à retirer en prod)
+  if (req.cookies.get('admin_session')?.value) {
+    try {
+      const decoded = Buffer.from(req.cookies.get('admin_session')!.value, 'base64').toString();
+      const adminSession = JSON.parse(decoded);
+      const userId = adminSession.userId;
+      if (userId) {
+        const payload = {
+          userId,
+          timestamp: Date.now(),
+          exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
+        };
+        const newSharedToken = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const cookieOptions: any = {
+          path: '/',
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7,
+        };
+        if (hostname.endsWith('.waibooth.app')) {
+          cookieOptions.domain = '.waibooth.app';
+        }
+        res.cookies.set('shared_auth_token', newSharedToken, cookieOptions);
+        console.log('Cookie shared_auth_token posé partout (debug)', cookieOptions);
+      }
+    } catch (e) {
+      console.error('Erreur debug pose cookie:', e);
+    }
+  }
+
   // Protect /admin routes (pour mosaic)
   if (path === '/admin' || path.startsWith('/admin/')) {
     if (!isAuthenticated(req)) {

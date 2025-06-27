@@ -21,25 +21,18 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
       const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='));
       if (tokenCookie) {
         const token = tokenCookie.split('=')[1];
-        // Correction : décoder l'URL avant atob
         const decodedToken = decodeURIComponent(token);
         const userData = JSON.parse(atob(decodedToken));
         if (userData.userId) {
           setUserIdFromCookie(userData.userId);
         }
-        // Si tu veux l'email directement depuis le cookie (sans requête DB)
-        if (userData.email) {
-          setEmailFromDb(userData.email);
-        }
       }
     } catch (e) {
       setUserIdFromCookie(null);
-      setEmailFromDb(null);
     }
   }, []);
 
-  // Si tu veux prioriser l'email de la DB (admin_users) sur celui du cookie, décommente ce bloc :
-  /*
+  // Va chercher l'email dans admin_users à partir de l'id utilisateur du cookie
   useEffect(() => {
     const fetchEmail = async () => {
       if (userIdFromCookie) {
@@ -50,12 +43,13 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
           .single();
         if (data && data.email) {
           setEmailFromDb(data.email);
+        } else {
+          setEmailFromDb(null);
         }
       }
     };
     fetchEmail();
   }, [userIdFromCookie]);
-  */
 
   // Close menu when clicking outside
   useEffect(() => {

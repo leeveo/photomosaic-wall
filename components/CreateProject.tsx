@@ -331,9 +331,13 @@ export default function CreateProject() {
         // Ajoute les padding si besoin
         while (base64.length % 4 !== 0) base64 += '=';
         const decoded = JSON.parse(atob(base64));
+        console.log('shared_auth_token decoded:', decoded); // <-- Ajout log
         if (decoded.userId) return decoded.userId;
+        else {
+          console.error('Le champ userId est absent dans le cookie partagé:', decoded);
+        }
       } catch (e) {
-        // ignore
+        console.error('Erreur lors du décodage du cookie shared_auth_token:', e, sharedToken);
       }
     }
     // 2. Sinon, essayer via Supabase Auth

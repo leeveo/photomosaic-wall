@@ -509,9 +509,7 @@ export default function CreateProject() {
     }
 
     // Appeler la sauvegarde finale (setups, etc)
-    await handleCreate();
-    // Redirection immédiate après la création
-    router.push('/admin');
+    handleCreate();
   };
 
   // Wizard steps rendering
@@ -792,7 +790,32 @@ export default function CreateProject() {
         </div>
       )
     },
-  
+    {
+      label: "Design",
+      content: (
+        <div className="bg-white rounded-xl shadow-md p-8">
+          <PhotoBoothCustomizer 
+            initialSlug={slug} 
+            forceSlug={slug} 
+            hideProjectSelect 
+            onDataChange={handleBoothDataUpdate}
+          />
+        </div>
+      )
+    },
+    {
+      label: "Flyer",
+      content: (
+        <div className="bg-white rounded-xl shadow-md p-8">
+          <FlyerGenerator 
+            initialSlug={slug} 
+            forceSlug={slug} 
+            hideProjectSelect 
+            onDataChange={handleFlyerDataUpdate}
+          />
+        </div>
+      )
+    }
   ]
 
   // Wizard header
@@ -815,9 +838,12 @@ export default function CreateProject() {
   return (
     <div className="space-y-8">
       {/* Header gradient */}
-      <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
-        <h2 className="text-3xl font-bold mb-2">➕ Créer un nouveau projet</h2>
+      <div className="p-6 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg shadow text-white mb-2">
+        <h2 className="text-3xl font-bold mb-2">Créer un nouveau projet</h2>
         <p className="text-white text-opacity-80">Configurez un nouveau mur mosaïque photo pour votre événement.</p>
+        <p className="text-white text-opacity-70 mt-2">
+          Importez l’image principale, choisissez le format des étiquettes et définissez le nombre de lignes pour générer automatiquement votre grille mosaïque personnalisée.
+        </p>
       </div>
 
       {/* Wizard steps header */}

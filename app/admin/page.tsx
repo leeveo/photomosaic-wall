@@ -753,7 +753,16 @@ export default function AdminPage() {
         } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
       >
         <div className="p-6 border-b border-gray-100">
-          <h1 className="text-2xl font-semibold text-indigo-600 text-center">WaiBooth.app</h1>
+          <div className="flex flex-col items-center">
+            <Image
+              src="/logo.png"
+              alt="WaiBooth Logo"
+              width={150}
+              height={80}
+              className="mb-2"
+              priority
+            />
+          </div>
           <p className="text-sm text-purple-600 font-bold italic text-center">"Automatisez la magie.<br/> Laissez Waibooth gérer le show."</p>
         </div>
         <nav className="mt-6 flex flex-col gap-2 text-sm">
@@ -783,8 +792,7 @@ export default function AdminPage() {
                 { label: 'Créer Projet', icon: <FiPlusCircle />, tab: 'setup' },
                 { label: 'Photos', icon: <FiImage />, tab: 'photos' },
                 { label: 'Stats', icon: <FiBarChart2 />, tab: 'stats' },
-                { label: 'Flyer', icon: <FiCamera />, tab: 'flyer' },
-                { label: 'Design', icon: <FiEdit />, tab: 'design' },
+                
               ].map(({ label, icon, tab }) => (
                 <button
                   key={tab}

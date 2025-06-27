@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase'; // Assure-toi que ce chemin est correct
+import { supabase } from '@/lib/supabase';
 
 interface UserProfileMenuProps {
   email: string;
@@ -12,11 +12,9 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [userIdFromCookie, setUserIdFromCookie] = useState<string | null>(null);
-  const [emailFromCookie, setEmailFromCookie] = useState<string | null>(null);
   const [emailFromDb, setEmailFromDb] = useState<string | null>(null);
-  const [userIdFromDb, setUserIdFromDb] = useState<string | null>(null);
 
-  // Récupère l'id utilisateur ET l'email depuis le cookie au montage
+  // Récupère l'id utilisateur ET l'email depuis le cookie partagé (décodage URL si besoin)
   useEffect(() => {
     try {
       const cookies = document.cookie.split(';').map(c => c.trim());
@@ -29,34 +27,35 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
         if (userData.userId) {
           setUserIdFromCookie(userData.userId);
         }
-        // Correction : récupère bien l'email du cookie partagé
+        // Si tu veux l'email directement depuis le cookie (sans requête DB)
         if (userData.email) {
-          setEmailFromCookie(userData.email);
+          setEmailFromDb(userData.email);
         }
       }
     } catch (e) {
       setUserIdFromCookie(null);
-      setEmailFromCookie(null);
+      setEmailFromDb(null);
     }
   }, []);
 
-  // Va chercher l'email ET l'id dans Supabase si email trouvé dans le cookie
+  // Si tu veux prioriser l'email de la DB (admin_users) sur celui du cookie, décommente ce bloc :
+  /*
   useEffect(() => {
-    const fetchUser = async () => {
-      if (emailFromCookie) {
+    const fetchEmail = async () => {
+      if (userIdFromCookie) {
         const { data, error } = await supabase
           .from('admin_users')
-          .select('id, email')
-          .eq('email', emailFromCookie)
+          .select('email')
+          .eq('id', userIdFromCookie)
           .single();
-        if (data && data.id) {
-          setUserIdFromDb(data.id);
+        if (data && data.email) {
           setEmailFromDb(data.email);
         }
       }
     };
-    fetchUser();
-  }, [emailFromCookie]);
+    fetchEmail();
+  }, [userIdFromCookie]);
+  */
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -109,9 +108,9 @@ export default function UserProfileMenu({ email }: UserProfileMenuProps) {
         <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 transition-all duration-200 transform origin-top-right">
           <div className="p-4 border-b border-gray-100">
             <p className="text-sm text-gray-500">Connecté en tant que:</p>
-            <p className="font-medium text-gray-800 truncate">{emailFromCookie || emailFromDb || email}</p>
-            {userIdFromDb && (
-              <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromDb}</span></p>
+            <p className="font-medium text-gray-800 truncate">{emailFromDb || email}</p>
+            {userIdFromCookie && (
+              <p className="text-xs text-gray-400 mt-1">ID utilisateur: <span className="font-mono">{userIdFromCookie}</span></p>
             )}
           </div>
           <div className="p-2">

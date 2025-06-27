@@ -807,7 +807,7 @@ export default function AdminPage() {
           {/* Liens externes photomosaic, karaoke, quizz, roue, fresque */}
           <div className="px-6 py-2 mt-6 font-bold text-gray-700 flex items-center gap-2">
             <FiExternalLink className="w-4 h-4" />
-            Applications externes
+            Accès aux Autres Applications
           </div>
           <div className="flex flex-col gap-3 px-4">
             {[

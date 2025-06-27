@@ -56,10 +56,10 @@ export default function MosaicCanvas({ tiles }: Props) {
           console.warn('Tile invalide ignorée:', tile)
           continue
         }
-      
+
         const x = offsetX + tile.col * cellSize
         const y = offsetY + tile.row * cellSize
-      
+
         try {
           const userImg = new Image()
           userImg.crossOrigin = 'anonymous'
@@ -68,30 +68,26 @@ export default function MosaicCanvas({ tiles }: Props) {
             userImg.onload = res
             userImg.onerror = rej
           })
-      
-          // Effet de fondu
-          for (let alpha = 0; alpha <= 1; alpha += 0.1) {
-            ctx.globalAlpha = alpha
-            ctx.drawImage(userImg, x, y, cellSize, cellSize)
-            await new Promise((res) => setTimeout(res, 30)) // Pause pour l'effet
-          }
-          ctx.globalAlpha = 1.0 // Réinitialiser l'opacité
+
+          // Suppression de l'effet de fondu/clignotement
+          ctx.globalAlpha = 1.0
+          ctx.drawImage(userImg, x, y, cellSize, cellSize)
         } catch {
           // Image échouée → remplissage gris
           ctx.fillStyle = '#ccc'
           ctx.fillRect(x, y, cellSize, cellSize)
         }
-      
+
         // Overlay partie de l’image principale
         const srcW = mainImage.width / cols
         const srcH = mainImage.height / rows
         const srcX = tile.col * srcW
         const srcY = tile.row * srcH
-      
+
         ctx.globalAlpha = 0.4
         ctx.drawImage(mainImage, srcX, srcY, srcW, srcH, x, y, cellSize, cellSize)
         ctx.globalAlpha = 1.0
-      
+
         // Label
         ctx.fillStyle = '#000'
         ctx.font = 'bold 12px sans-serif'

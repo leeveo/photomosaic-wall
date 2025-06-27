@@ -20,7 +20,7 @@ const LABEL_FORMATS = [
 export default function CreateProject() {
   const { setImage, setGrid } = usePhotoMosaicStore()
 
-  const [slug, setSlug] = useState('')
+  const [slug, setSlug] = useState<string>(() => generateUniqueSlug());
   const [title, setTitle] = useState('')
   const [rows, setRows] = useState(5)
   const [cols, setCols] = useState(8)
@@ -113,29 +113,16 @@ export default function CreateProject() {
     drawGridPreview()
   }, [drawGridPreview])
 
-  // Add this function to validate and format slug
-  const validateSlug = (input: string): string => {
-    // Replace spaces and special characters with hyphens
-    let formatted = input.toLowerCase()
-      .replace(/[^\w\s-]/g, '') // Remove special characters except hyphens
-      .replace(/\s+/g, '-')     // Replace spaces with hyphens
-      .replace(/-+/g, '-');     // Replace multiple hyphens with single hyphen
-    
-    // Ensure the slug doesn't start or end with a hyphen
-    formatted = formatted.replace(/^-+|-+$/g, '');
-    
-    // If empty after cleaning, use a default
-    if (!formatted) {
-      formatted = 'projet-' + Date.now().toString().slice(-6);
-    }
-    
-    return formatted;
-  };
+  // Générateur de slug unique (ex: "proj-1681234567890-4f3a2b")
+  function generateUniqueSlug() {
+    const rand = Math.random().toString(36).substring(2, 8);
+    return `proj-${Date.now()}-${rand}`;
+  }
 
-  // Modify the slug input handler to validate automatically
-  const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSlug(validateSlug(e.target.value));
-  };
+  // À chaque création de projet, regénère un slug unique
+  useEffect(() => {
+    setSlug(generateUniqueSlug());
+  }, []);
 
   // Add this function to check if the user has the appropriate permissions
   const checkPermissions = async () => {
@@ -558,7 +545,8 @@ export default function CreateProject() {
                   />
                 </div>
               </div>
-              <div>
+              {/* Slug (identifiant) - champ supprimé, slug généré automatiquement */}
+              {/* <div>
                 <label className="block mb-2 font-medium text-blue-700">
                   Slug (identifiant) <span className="text-red-500">*</span>
                 </label>
@@ -576,7 +564,7 @@ export default function CreateProject() {
                   />
                 </div>
                 <p className="mt-1 text-xs text-blue-600">Utilisé pour les URL, uniquement lettres, chiffres et tirets</p>
-              </div>
+              </div> */}
               <div>
                 <label className="block mb-2 font-medium text-blue-700">
                   Date de l&apos;événement <span className="text-red-500">*</span>

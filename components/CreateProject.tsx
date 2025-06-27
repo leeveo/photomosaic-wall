@@ -323,15 +323,16 @@ export default function CreateProject() {
   // Modifie la fonction pour obtenir l'id utilisateur depuis le cookie partagé si besoin
   const getCurrentAdminUserId = async (): Promise<string | null> => {
     if (typeof document !== 'undefined') {
-      console.log('[DEBUG] document.cookie:', document.cookie); // Ajout log
+      console.log('[DEBUG] document.cookie:', document.cookie);
     }
     // 1. Essayer via le cookie partagé (shared_auth_token) EN PREMIER
     const sharedToken = typeof document !== 'undefined' ? getCookie('shared_auth_token') : null;
-    console.log('[DEBUG] sharedToken:', sharedToken); // Ajout log
+    console.log('[DEBUG] sharedToken:', sharedToken);
     if (sharedToken) {
       try {
-        // Correction : ne pas faire de remplacement base64url, juste atob
-        const decoded = JSON.parse(atob(sharedToken));
+        // Correction : décoder l'URL avant atob
+        const decodedToken = decodeURIComponent(sharedToken);
+        const decoded = JSON.parse(atob(decodedToken));
         console.log('[DEBUG] shared_auth_token decoded:', decoded);
         if (decoded.userId) return decoded.userId;
         else {

@@ -509,7 +509,9 @@ export default function CreateProject() {
     }
 
     // Appeler la sauvegarde finale (setups, etc)
-    handleCreate();
+    await handleCreate();
+    // Redirection immédiate après la création
+    router.push('/admin');
   };
 
   // Wizard steps rendering

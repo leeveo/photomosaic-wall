@@ -823,23 +823,11 @@ export default function AdminPage() {
                 icon: <FiMusic className="w-5 h-5" />,
                 color: 'bg-pink-100 text-pink-700 border-pink-300',
               },
-              {
-                label: 'Quizz',
-                url: process.env.NEXT_PUBLIC_QUIZZ_URL || 'https://quizz.waibooth.app',
-                icon: <FiHelpCircle className="w-5 h-5" />,
-                color: 'bg-green-100 text-green-700 border-green-300',
-              },
-              {
-                label: 'Roue de la fortune',
-                url: process.env.NEXT_PUBLIC_ROUE_FORTUNE_URL || 'https://roue.waibooth.app',
-                icon: <FiRotateCcw className="w-5 h-5" />,
-                color: 'bg-yellow-100 text-yellow-700 border-yellow-300',
-              },
-              {
-                label: 'Fresque animée',
-                url: process.env.NEXT_PUBLIC_FRESQUE_ANIMEE_URL || 'https://fresque.waibooth.app',
-                icon: <FiFilm className="w-5 h-5" />,
-                color: 'bg-purple-100 text-purple-700 border-purple-300',
+               {
+                label: 'Photobooth IA',
+                url: process.env.NEXT_PUBLIC_PHOTOBOOTH_IA_URL || 'https://photobooth.waibooth.app',
+                icon: <FiMusic className="w-5 h-5" />,
+                color: 'bg-pink-100 text-pink-700 border-pink-300',
               }
             ].map(app => (
               <a

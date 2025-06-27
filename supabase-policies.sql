@@ -121,3 +121,33 @@ ON storage.objects
 FOR DELETE
 TO authenticated
 USING (bucket_id = 'backgrounds');
+
+-- Tiles table policies
+-- Enable Row Level Security on the tiles table
+ALTER TABLE tiles ENABLE ROW LEVEL SECURITY;
+
+-- Supprime toutes les autres policies restrictives sur tiles et garde seulement :
+DROP POLICY IF EXISTS "Allow insert for all" ON public.tiles;
+DROP POLICY IF EXISTS "Allow select for all" ON public.tiles;
+DROP POLICY IF EXISTS "Allow update for all" ON public.tiles;
+DROP POLICY IF EXISTS "Allow delete for all" ON public.tiles;
+
+CREATE POLICY "Allow insert for all" 
+ON public.tiles
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "Allow select for all" 
+ON public.tiles
+FOR SELECT
+USING (true);
+
+CREATE POLICY "Allow update for all" 
+ON public.tiles
+FOR UPDATE
+USING (true);
+
+CREATE POLICY "Allow delete for all" 
+ON public.tiles
+FOR DELETE
+USING (true);

@@ -324,34 +324,37 @@ export default function CreateProject() {
   const getCurrentAdminUserId = async (): Promise<string | null> => {
     // 1. Essayer via le cookie partagé (shared_auth_token) EN PREMIER
     const sharedToken = typeof document !== 'undefined' ? getCookie('shared_auth_token') : null;
+    console.log('[DEBUG] sharedToken:', sharedToken); // Ajout log
     if (sharedToken) {
       try {
-        // Certains navigateurs encodent le cookie en base64url, donc on remplace -_/ par +/
-        let base64 = sharedToken.replace(/-/g, '+').replace(/_/g, '/');
-        // Ajoute les padding si besoin
-        while (base64.length % 4 !== 0) base64 += '=';
-        const decoded = JSON.parse(atob(base64));
-        console.log('shared_auth_token decoded:', decoded); // <-- Ajout log
+        // Correction : ne pas faire de remplacement base64url, juste atob
+        const decoded = JSON.parse(atob(sharedToken));
+        console.log('[DEBUG] shared_auth_token decoded:', decoded);
         if (decoded.userId) return decoded.userId;
         else {
-          console.error('Le champ userId est absent dans le cookie partagé:', decoded);
+          console.error('[DEBUG] Le champ userId est absent dans le cookie partagé:', decoded);
         }
       } catch (e) {
-        console.error('Erreur lors du décodage du cookie shared_auth_token:', e, sharedToken);
+        console.error('[DEBUG] Erreur lors du décodage du cookie shared_auth_token:', e, sharedToken);
       }
+    } else {
+      console.warn('[DEBUG] Pas de cookie shared_auth_token trouvé');
     }
     // 2. Sinon, essayer via Supabase Auth
     if (typeof window !== 'undefined') {
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('[DEBUG] supabase.auth.getUser() user:', user);
       if (user?.email) {
         const { data, error } = await supabase
           .from('admin_users')
           .select('id')
           .eq('email', user.email)
           .maybeSingle();
+        console.log('[DEBUG] admin_users lookup:', { data, error });
         if (!error && data) return data.id;
       }
     }
+    console.error('[DEBUG] Impossible de récupérer l\'utilisateur courant');
     return null;
   };
 

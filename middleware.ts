@@ -84,7 +84,6 @@ export async function middleware(req: NextRequest) {
         const newSharedToken = Buffer.from(JSON.stringify(payload)).toString('base64');
         res.cookies.set('shared_auth_token', newSharedToken, {
           path: '/',
-          httpOnly: true,
           secure: true,
           sameSite: 'lax',
           maxAge: 60 * 60 * 24 * 7,

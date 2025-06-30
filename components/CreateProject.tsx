@@ -299,54 +299,33 @@ export default function CreateProject() {
   };
 
   // Ajout: fonction pour obtenir l'id de l'utilisateur courant (admin_users)
-  // Ajout: fonction utilitaire pour lire le cookie côté client
-  function getCookie(name: string): string | null {
+  // Ajout: fonction utilitaire pour lire le cookie côté client (supporte plusieurs noms)
+  function getCookie(names: string[]): string | null {
     if (typeof document === 'undefined') return null;
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()?.split(';').shift() || null;
+    const cookies = document.cookie.split(';').map(c => c.trim());
+    for (const name of names) {
+      const found = cookies.find(c => c.startsWith(`${name}=`));
+      if (found) return found.split('=')[1];
+    }
     return null;
   }
 
-  // Modifie la fonction pour obtenir l'id utilisateur depuis le cookie partagé si besoin
+  // Modifie la fonction pour obtenir l'id utilisateur depuis le cookie partagé (comme UserProfileMenu)
   const getCurrentAdminUserId = async (): Promise<string | null> => {
-    if (typeof document !== 'undefined') {
-      console.log('[DEBUG] document.cookie:', document.cookie);
-    }
-    // 1. Essayer via le cookie partagé (shared_auth_token) EN PREMIER
-    const sharedToken = typeof document !== 'undefined' ? getCookie('shared_auth_token') : null;
-    console.log('[DEBUG] sharedToken:', sharedToken);
-    if (sharedToken) {
+    // Cherche d'abord shared_auth_token, puis admin_session
+    const token = typeof document !== 'undefined'
+      ? getCookie(['shared_auth_token', 'admin_session'])
+      : null;
+    if (token) {
       try {
-        // Correction : décoder l'URL avant atob
-        const decodedToken = decodeURIComponent(sharedToken);
-        const decoded = JSON.parse(atob(decodedToken));
-        console.log('[DEBUG] shared_auth_token decoded:', decoded);
-        if (decoded.userId) return decoded.userId;
-        else {
-          console.error('[DEBUG] Le champ userId est absent dans le cookie partagé:', decoded);
-        }
+        const decodedToken = decodeURIComponent(token);
+        const userData = JSON.parse(atob(decodedToken));
+        if (userData.userId) return userData.userId;
       } catch (e) {
-        console.error('[DEBUG] Erreur lors du décodage du cookie shared_auth_token:', e, sharedToken);
-      }
-    } else {
-      console.warn('[DEBUG] Pas de cookie shared_auth_token trouvé');
-    }
-    // 2. Sinon, essayer via Supabase Auth
-    if (typeof window !== 'undefined') {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('[DEBUG] supabase.auth.getUser() user:', user);
-      if (user?.email) {
-        const { data, error } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('email', user.email)
-          .maybeSingle();
-        console.log('[DEBUG] admin_users lookup:', { data, error });
-        if (!error && data) return data.id;
+        console.error('[DEBUG] Erreur lors du décodage du cookie partagé:', e, token);
       }
     }
-    console.error('[DEBUG] Impossible de récupérer l\'utilisateur courant');
+    // Si aucun cookie trouvé, retourne null (pour cohérence avec UserProfileMenu)
     return null;
   };
 

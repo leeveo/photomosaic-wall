@@ -821,7 +821,7 @@ export default function AdminPage() {
             {[
               {
                 label: 'Photo mosaique',
-                url: process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL || 'https://photomosaic.waibooth.app',
+                url: process.env.NEXT_PUBLIC_PHOTO_MOSAIQUE_URL || 'https://mosaic.waibooth.app',
                 icon: <FiGrid className="w-5 h-5" />,
                 color: 'bg-indigo-100 text-indigo-700 border-indigo-300',
               },

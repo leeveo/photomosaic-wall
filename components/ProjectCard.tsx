@@ -87,6 +87,29 @@ export default function ProjectCard({
     }
   }
 
+  const [userIdFromCookie, setUserIdFromCookie] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const cookies = document.cookie.split(';').map(c => c.trim())
+      const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='))
+      if (tokenCookie) {
+        const token = tokenCookie.split('=')[1]
+        const decodedToken = decodeURIComponent(token)
+        const userData = JSON.parse(atob(decodedToken))
+        if (userData.userId) {
+          setUserIdFromCookie(userData.userId)
+        }
+      }
+    } catch (e) {
+      setUserIdFromCookie(null)
+    }
+  }, [])
+
+  if (userIdFromCookie && owner !== userIdFromCookie) {
+    return null
+  }
+
   return (
     <>
       <div className="bg-white rounded-xl px-6 py-4 shadow-sm hover:shadow-md transition border border-gray-200 flex flex-col gap-4 relative">

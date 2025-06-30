@@ -19,6 +19,17 @@ type Props = {
   eventDate?: string
 }
 
+// Fonction utilitaire pour lire le cookie partagé (supporte plusieurs noms)
+function getCookie(names: string[]): string | null {
+  if (typeof document === 'undefined') return null
+  const cookies = document.cookie.split(';').map(c => c.trim())
+  for (const name of names) {
+    const found = cookies.find(c => c.startsWith(`${name}=`))
+    if (found) return found.split('=')[1]
+  }
+  return null
+}
+
 export default function ProjectCard({
   id,
   title,
@@ -90,22 +101,26 @@ export default function ProjectCard({
   const [userIdFromCookie, setUserIdFromCookie] = useState<string | null>(null)
 
   useEffect(() => {
-    try {
-      const cookies = document.cookie.split(';').map(c => c.trim())
-      const tokenCookie = cookies.find(c => c.startsWith('shared_auth_token=')) || cookies.find(c => c.startsWith('admin_session='))
-      if (tokenCookie) {
-        const token = tokenCookie.split('=')[1]
+    // Unifie la logique avec CreateProject.tsx
+    const token = getCookie(['shared_auth_token', 'admin_session'])
+    if (token) {
+      try {
         const decodedToken = decodeURIComponent(token)
         const userData = JSON.parse(atob(decodedToken))
         if (userData.userId) {
           setUserIdFromCookie(userData.userId)
+        } else {
+          setUserIdFromCookie(null)
         }
+      } catch (e) {
+        setUserIdFromCookie(null)
       }
-    } catch (e) {
+    } else {
       setUserIdFromCookie(null)
     }
   }, [])
 
+  // Filtrage : n'affiche la carte que si l'utilisateur courant est le propriétaire
   if (userIdFromCookie && owner !== userIdFromCookie) {
     return null
   }

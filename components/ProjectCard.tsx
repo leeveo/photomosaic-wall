@@ -30,9 +30,9 @@ export default function ProjectCard({
   eventDate,
 }: Props) {
   const statusMap = {
-    pending: { label: 'PENDING', class: 'bg-yellow-100 text-yellow-700' },
-    in_progress: { label: 'ON PROGRESS', class: 'bg-blue-100 text-blue-700' },
-    closed: { label: 'CLOSED', class: 'bg-green-100 text-green-700' },
+    pending: { label: 'À venir', class: 'bg-yellow-100 text-yellow-700' },
+    in_progress: { label: 'En cours', class: 'bg-blue-100 text-blue-700' },
+    closed: { label: 'Terminée', class: 'bg-green-100 text-green-700' },
   }
 
   const [showQR, setShowQR] = useState(false)
@@ -40,7 +40,9 @@ export default function ProjectCard({
   const [deleting, setDeleting] = useState(false)
   const { Canvas } = useQRCode()
 
-  const boothUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/photo?id=${slug}`
+  const [origin, setOrigin] = useState(process.env.NEXT_PUBLIC_SITE_URL || '')
+  useEffect(() => { setOrigin(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin) }, [])
+  const boothUrl = `${origin}/photo?id=${encodeURIComponent(slug)}`
 
   useEffect(() => {
     const loadImage = async () => {

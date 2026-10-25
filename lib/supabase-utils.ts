@@ -3,8 +3,9 @@ import { supabase } from './supabase'
 export async function uploadImage(base64Data: string, slug: string) {
   const fileName = `${slug}/${Date.now()}.jpg`
 
-  const base64 = base64Data.split(',')[1]
-  const buffer = Buffer.from(base64, 'base64')
+  const response = await fetch(base64Data)
+  if (!response.ok) throw new Error('Image illisible')
+  const buffer = await response.blob()
 
   const { error } = await supabase.storage
     .from('tiles')

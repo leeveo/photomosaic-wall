@@ -1,5 +1,7 @@
 'use client'
 
+import EnvironmentGate from '@/components/EnvironmentGate'
+
 import { Suspense, useEffect, useRef, useState, useCallback } from 'react'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -24,6 +26,7 @@ function SetupPageContent() {
 
   const { setImage, setGrid } = usePhotoMosaicStore()
 
+  const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState(5)
   const [cols, setCols] = useState(8)
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null)
@@ -35,7 +38,6 @@ function SetupPageContent() {
 
   useEffect(() => {
     if (!slug) {
-      alert('ID manquant dans URL.')
       router.push('/admin')
     }
   }, [slug, router])
@@ -44,7 +46,7 @@ function SetupPageContent() {
     if (!imageSize || !selectedFormat) return
     const imageRatio = imageSize.width / imageSize.height
     const labelRatio = selectedFormat.widthMM / selectedFormat.heightMM
-    const calculatedCols = Math.round(rows * imageRatio * labelRatio)
+    const calculatedCols = Math.max(1, Math.min(500, Math.round(rows * imageRatio / labelRatio)))
     setCols(calculatedCols)
   }, [rows, selectedFormat, imageSize])
 
@@ -56,7 +58,6 @@ function SetupPageContent() {
     if (!ctx) return
 
     const img = new window.Image()
-    img.src = localPreview
     img.onload = () => {
       const { width, height } = img
       canvas.width = width
@@ -85,6 +86,7 @@ function SetupPageContent() {
         ctx.stroke()
       }
     }
+    img.src = localPreview
   }, [localPreview, rows, cols, imageSize])
 
   useEffect(() => {
@@ -99,7 +101,6 @@ function SetupPageContent() {
     reader.onload = () => {
       const result = reader.result as string
       const img = new window.Image()
-      img.src = result
       img.onload = () => {
         const maxWidth = 800
         const scale = img.width > maxWidth ? maxWidth / img.width : 1
@@ -115,19 +116,19 @@ function SetupPageContent() {
         setLocalPreview(compressed)
         setImageSize({ width: canvas.width, height: canvas.height })
       }
+      img.onerror = () => alert('Le fichier sélectionné n’est pas une image valide.')
+      img.src = result
     }
+    reader.onerror = () => alert('Impossible de lire ce fichier.')
     reader.readAsDataURL(file)
   }
 
   const handleStart = async () => {
-    if (!slug || !localPreview) return
+    if (!slug || !localPreview || saving) return
+    setSaving(true)
 
     try {
-      // Supprimer un ancien setup s'il existe
-      await supabase.from('setups').delete().eq('project_slug', slug)
-
-      // Ajouter le nouveau setup
-      const { error } = await supabase.from('setups').insert([{
+      const { error } = await supabase.from('setups').upsert([{
         project_slug: slug,
         image: localPreview,
         rows,
@@ -147,11 +148,13 @@ function SetupPageContent() {
     } catch (e) {
       console.error('handleStart error:', e)
       alert('Impossible de démarrer la mosaïque.')
+    } finally {
+      setSaving(false)
     }
   }
 
   return (
-    <div style={{ padding: 32 }}>
+    <div className="setup-page wall-panel">
       <h1>🛠️ Configuration du projet {slug}</h1>
 
       <div style={{ marginBottom: 24 }}>
@@ -202,7 +205,7 @@ function SetupPageContent() {
         <input
           type="number"
           value={rows}
-          onChange={(e) => setRows(Number(e.target.value))}
+          onChange={(e) => setRows(Math.max(1, Math.min(50, Math.floor(Number(e.target.value)) || 1)))}
           min={1}
           max={50}
         />
@@ -211,17 +214,21 @@ function SetupPageContent() {
         </span>
       </div>
 
-      <button onClick={handleStart} style={{ padding: '1rem 2rem', fontSize: '18px' }}>
-        🚀 Lancer le mur photo
+      <button className="btn-primary" disabled={!localPreview || saving} onClick={handleStart}>
+        {saving ? 'Enregistrement…' : 'Lancer le mur photo'}
       </button>
     </div>
   )
 }
 
-export default function SetupPage() {
+function SetupPageContentWrapper() {
   return (
-    <Suspense fallback={<div style={{ padding: 32 }}>Chargement de la configuration...</div>}>
+    <Suspense fallback={<div className="setup-page wall-panel">Chargement de la configuration...</div>}>
       <SetupPageContent />
     </Suspense>
   )
+}
+
+export default function SetupPage() {
+  return <EnvironmentGate><SetupPageContentWrapper /></EnvironmentGate>
 }

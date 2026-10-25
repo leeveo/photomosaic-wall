@@ -1,5 +1,6 @@
 'use client'
 
+import { availablePositions, loadCanvasImage } from '@/lib/mosaic'
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import WebcamCapture, { WebcamCaptureHandle } from '@/components/WebcamCapture'
@@ -22,6 +23,11 @@ export default function PhotoPage() {
   const searchParams = useSearchParams()
   const slug = searchParams.get('id')
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const captureTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const savingRef = useRef(false)
   const [tiles, setTiles] = useState<MosaicTile[]>([])
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -34,8 +40,13 @@ export default function PhotoPage() {
 
   const webcamRef = useRef<WebcamCaptureHandle>(null)
   const store = usePhotoMosaicStore()
+  const setImage = usePhotoMosaicStore(state => state.setImage)
+  const setGrid = usePhotoMosaicStore(state => state.setGrid)
 
   useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setErrorMessage(null)
     const init = async () => {
       if (!slug) return router.push('/admin')
 
@@ -50,7 +61,8 @@ export default function PhotoPage() {
         return router.push(`/setup?id=${slug}`)
       }
 
-      let imageUrl = setup.image
+      let imageUrl = setup.image || ''
+      if (!imageUrl) throw new Error('L’image de la mosaïque est manquante.')
 
       if (!imageUrl.startsWith('http') && !imageUrl.startsWith('data:image')) {
         const { data: publicUrlData } = supabase.storage
@@ -64,12 +76,14 @@ export default function PhotoPage() {
         return
       }
 
-      store.setImage(imageUrl)
-      store.setGrid(setup.rows, setup.cols)
+      if (cancelled) return
+      setImage(imageUrl)
+      setGrid(setup.rows, setup.cols)
       setTotalTiles(setup.rows * setup.cols)
 
       const t = await loadTiles(slug)
-      setTiles(t)
+      if (cancelled) return
+      setTiles(t.map(tile => ({ src: tile.image_url, row: tile.row, col: tile.col })))
 
       const { data: dsgn } = await supabase
         .from('designs')
@@ -77,6 +91,7 @@ export default function PhotoPage() {
         .eq('project_slug', slug)
         .single()
 
+      if (cancelled) return
       if (dsgn) {
         setDesign({
           backgroundColor: dsgn.background_color || '#000000',
@@ -93,45 +108,49 @@ export default function PhotoPage() {
       setLoading(false)
     }
 
-    init()
-  }, [slug, router, store])
+    init().catch(() => { if (cancelled) return; setErrorMessage('Impossible de charger cet événement. Réessayez dans quelques instants.'); setLoading(false) })
+    return () => { cancelled = true }
+  }, [slug, router, setImage, setGrid])
+
+  useEffect(() => () => {
+    if (captureTimer.current) clearTimeout(captureTimer.current)
+    if (resetTimer.current) clearTimeout(resetTimer.current)
+  }, [])
 
   const handleTakePhotoClick = () => {
-    setCountdown(3)
-    const interval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev === 1) {
-          clearInterval(interval)
-          ;(async () => {
-            if (webcamRef.current) {
-              const base64 = await webcamRef.current.takePhoto()
-              setCountdown(null)
-              assignTile(base64)
-              setStep(3)
-            }
-          })()
-          return null
-        }
-        return (prev ?? 0) - 1
-      })
-    }, 1000)
-  }
-
-  const assignTile = (imageSrc: string) => {
-    const used = new Set(tiles.map(t => `${t.row}-${t.col}`))
-    const { rows, cols } = store
-
-    let row: number, col: number
-    do {
-      row = Math.floor(Math.random() * rows)
-      col = Math.floor(Math.random() * cols)
-    } while (used.has(`${row}-${col}`))
-
-    setCapturedImage(imageSrc)
-    setPreviewTile({ row, col })
+    if (captureTimer.current || countdown !== null) return
+    setErrorMessage(null)
+    let remaining = 3
+    setCountdown(remaining)
+    const tick = async () => {
+      remaining -= 1
+      if (remaining > 0) {
+        setCountdown(remaining)
+        captureTimer.current = setTimeout(tick, 1000)
+        return
+      }
+      captureTimer.current = null
+      setCountdown(null)
+      try {
+        const base64 = await webcamRef.current?.takePhoto()
+        if (!base64) throw new Error('La caméra n’est pas prête. Vérifiez son autorisation puis réessayez.')
+        const free = availablePositions(store.rows, store.cols, tiles)
+        if (!free.length) throw new Error('Cette mosaïque est complète. Merci pour votre participation !')
+        setCapturedImage(base64)
+        setPreviewTile(free[Math.floor(Math.random() * free.length)])
+        setStep(3)
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : 'La capture a échoué.')
+      }
+    }
+    captureTimer.current = setTimeout(tick, 1000)
   }
 
   const validatePhoto = async () => {
+    if (savingRef.current || confirmed) return
+    savingRef.current = true
+    setSaving(true)
+    setErrorMessage(null)
     try {
       if (!capturedImage || !previewTile || !slug) {
         console.warn('Données manquantes pour valider:', { capturedImage, previewTile, slug })
@@ -144,9 +163,9 @@ export default function PhotoPage() {
 
       setTiles(prev => [...prev, { src: imageUrl, row: previewTile.row, col: previewTile.col }])
       setConfirmed(true)
-      new Audio('/click.wav').play()
+      void new Audio('/click.wav').play().catch(() => {})
 
-      setTimeout(() => {
+      resetTimer.current = setTimeout(() => {
         setConfirmed(false)
         setCapturedImage(null)
         setPreviewTile(null)
@@ -154,7 +173,10 @@ export default function PhotoPage() {
       }, 1500)
     } catch (e) {
       console.error('validatePhoto error:', e)
-      alert('Erreur lors de la sauvegarde de la photo.')
+      setErrorMessage('La photo n’a pas été enregistrée. Réessayez ; si la place a été prise, reprenez une photo.')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
   }
 
@@ -163,39 +185,20 @@ export default function PhotoPage() {
     row: number,
     col: number
   ): Promise<string> => {
-    return new Promise(resolve => {
-      const userImg = new window.Image()
-      const mosaicImg = new window.Image()
-
-      userImg.crossOrigin = 'anonymous'
-      mosaicImg.crossOrigin = 'anonymous'
-
-      userImg.src = base64
-      mosaicImg.src = store.imageSrc!
-
-      userImg.onload = () => {
-        mosaicImg.onload = () => {
-          const size = 300
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')!
-          canvas.width = size
-          canvas.height = size
-
-          ctx.drawImage(userImg, 0, 0, size, size)
-
-          const srcX = (col * mosaicImg.width) / store.cols
-          const srcY = (row * mosaicImg.height) / store.rows
-          const srcW = mosaicImg.width / store.cols
-          const srcH = mosaicImg.height / store.rows
-
-          ctx.globalAlpha = 0.5
-          ctx.drawImage(mosaicImg, srcX, srcY, srcW, srcH, 0, 0, size, size)
-          ctx.globalAlpha = 1.0
-
-          resolve(canvas.toDataURL('image/jpeg', 0.8))
-        }
-      }
-    })
+    if (!store.imageSrc) throw new Error('Image de la mosaïque manquante.')
+    const [userImg, mosaicImg] = await Promise.all([
+      loadCanvasImage(base64), loadCanvasImage(store.imageSrc),
+    ])
+    const canvas = document.createElement('canvas')
+    canvas.width = canvas.height = 300
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Le navigateur ne peut pas composer la photo.')
+    ctx.drawImage(userImg, 0, 0, 300, 300)
+    ctx.globalAlpha = 0.5
+    const srcW = mosaicImg.width / store.cols
+    const srcH = mosaicImg.height / store.rows
+    ctx.drawImage(mosaicImg, col * srcW, row * srcH, srcW, srcH, 0, 0, 300, 300)
+    return canvas.toDataURL('image/jpeg', 0.8)
   }
 
   const cancelPhoto = () => {
@@ -203,6 +206,8 @@ export default function PhotoPage() {
     setPreviewTile(null)
     setStep(1)
   }
+
+  if (errorMessage && loading === false && !totalTiles) return <main className="connection-page"><p role="alert" className="wall-error">{errorMessage}</p><button className="btn-primary" onClick={() => window.location.reload()}>Réessayer</button></main>
 
   if (loading || !store.imageSrc) {
     return (
@@ -230,7 +235,7 @@ export default function PhotoPage() {
     <main
       className="min-h-screen flex flex-col items-center justify-center bg-gray-100 px-2 py-6"
       style={{
-        backgroundColor: design?.backgroundColor || '#000000',
+        backgroundColor: design?.backgroundColor || '#f5f0ff',
         backgroundImage: design?.backgroundImage ? `url(${design.backgroundImage})` : undefined,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
@@ -238,7 +243,7 @@ export default function PhotoPage() {
     >
       {/* Header gradient */}
       <div className="w-full max-w-xl mb-8">
-        <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white text-center">
+        <div className="p-6 bg-gradient-to-br from-violet-600 to-purple-500 rounded-2xl shadow text-white text-center">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2">📸 Photobooth – {slug}</h1>
           <p className="text-white text-opacity-80">
             Participez à la mosaïque photo de l&apos;événement !
@@ -248,6 +253,7 @@ export default function PhotoPage() {
 
       {/* Main card */}
       <div className="w-full max-w-xl bg-white rounded-xl shadow-lg p-8 flex flex-col items-center space-y-8">
+        {errorMessage && <p role="alert" className="wall-error">{errorMessage}</p>}
         {step === 1 && (
           <div className="space-y-6 w-full">
             <p className="text-lg sm:text-xl text-gray-800">{stepTexts.step1}</p>
@@ -262,10 +268,12 @@ export default function PhotoPage() {
               />
             </div>
             <button
+              disabled={tiles.length >= totalTiles}
               onClick={() => setStep(2)}
               className={mainButton}
+              style={design?.buttonColor ? { background: design.buttonColor } : undefined}
             >
-              🎬 Commencer
+              {tiles.length >= totalTiles ? 'Mosaïque complète — merci !' : 'Commencer l’expérience'}
             </button>
           </div>
         )}
@@ -298,12 +306,14 @@ export default function PhotoPage() {
             </div>
             <div className="flex gap-4 mt-4 w-full">
               <button
+                disabled={saving || confirmed}
                 onClick={validatePhoto}
                 className={validateButton}
               >
-                ✅ Valider
+                {saving ? 'Enregistrement…' : 'Valider ma photo'}
               </button>
               <button
+                disabled={saving || confirmed}
                 onClick={cancelPhoto}
                 className={cancelButton}
               >

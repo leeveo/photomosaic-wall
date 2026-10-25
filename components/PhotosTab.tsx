@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 
 type Tile = {
@@ -14,7 +15,7 @@ type MosaicMeta = {
   title: string
   createdAt: string
   hasImage: boolean
-  setupImage?: string | null 
+  setupImage?: string | null
   rows: number
   cols: number
   tilesCount: number
@@ -51,26 +52,26 @@ const PhotosTab: React.FC<Props> = ({
     ? tiles
     : tiles.filter(tile => tile.project_slug === selectedProject);
 
-  const refreshTiles = async () => {
+  const refreshTiles = useCallback(async () => {
     try {
       const { data: allTiles, error } = await supabase.from('tiles').select('*');
-      
+
       if (error) {
         console.error("Error fetching tiles:", error);
         return;
       }
-      
+
       console.log("Fetched tiles:", allTiles);
       setTiles(allTiles || []);
     } catch (err) {
       console.error("Error in refreshTiles:", err);
     }
-  };
+  }, [setTiles]);
 
   // Load tiles on mount
   useEffect(() => {
     refreshTiles();
-  }, []);
+  }, [refreshTiles]);
 
   const handlePrint = async (imageUrl: string) => {
     try {
@@ -104,14 +105,14 @@ const PhotosTab: React.FC<Props> = ({
 
   // Function to get full image URL directly
   const getImageUrl = (filename: string): string => {
-    if (filename.startsWith('http')) return filename;
-    return `https://icchwywclqqoxshugiog.supabase.co/storage/v1/object/public/tiles/${filename}`;
+    if (/^(https?:|data:image)/.test(filename)) return filename;
+    return supabase.storage.from('tiles').getPublicUrl(filename).data.publicUrl;
   };
 
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold mb-6 text-black">🖼️ Photos par projet</h2>
-      
+
       {/* Controls for project selection */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
@@ -148,35 +149,38 @@ const PhotosTab: React.FC<Props> = ({
             {filteredTiles.map(tile => {
               // Generate the full URL directly
               const fullImageUrl = getImageUrl(tile.image_url);
-              
+
               return (
                 <div
                   key={tile.id}
                   className="relative rounded-md overflow-hidden group bg-gray-50 shadow-xl hover:shadow-2xl transition"
                 >
                   {/* Use regular img tag for simplicity */}
-                  <img 
-                    src={fullImageUrl} 
+                  <Image unoptimized width={300} height={300}
+                    src={fullImageUrl}
                     alt={`Photo ${tile.project_slug} ${String.fromCharCode(65 + tile.row)}-${tile.col + 1}`}
                     className="w-full aspect-square object-cover rounded-t-md"
                     onError={(e) => {
                       console.error("Image failed to load:", fullImageUrl);
-                      e.currentTarget.src = 'https://via.placeholder.com/300?text=Error';
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.alt = 'Photo indisponible';
                     }}
                   />
-                  
+
                   <div className="absolute top-2 left-2 px-3 py-1 rounded-lg shadow-lg font-mono text-xs font-semibold bg-white/70 backdrop-blur-md text-gray-800 border border-white/60 flex flex-col items-start transition-all">
                     <span className="uppercase tracking-wide text-[11px] font-bold text-blue-700">{tile.project_slug}</span>
                     <span className="text-[11px] font-semibold text-gray-700">{String.fromCharCode(65 + tile.row)}-{tile.col + 1}</span>
                   </div>
-                  <div className="absolute bottom-1 left-1 right-1 flex justify-between px-1 opacity-0 group-hover:opacity-100 transition">
+                  <div className="absolute bottom-1 left-1 right-1 flex justify-between px-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition">
                     <button
-                      onClick={() => handlePrint(tile.image_url)}
+                      aria-label="Imprimer la photo"
+                      onClick={() => handlePrint(fullImageUrl)}
                       className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full text-xs shadow hover:from-blue-600 hover:to-purple-700"
                     >
                       🖨️
                     </button>
                     <button
+                      aria-label="Supprimer la photo"
                       onClick={() => {
                         setTileToDelete({ id: tile.id, url: tile.image_url })
                         setShowDeleteModal(true)
@@ -199,8 +203,8 @@ const PhotosTab: React.FC<Props> = ({
           <div className="bg-white rounded-xl shadow-xl w-[90%] max-w-sm p-6">
             <h3 className="text-lg font-bold mb-4 text-gray-800">Supprimer cette image ?</h3>
             {/* Use img tag for simplicity */}
-            <img 
-              src={getImageUrl(tileToDelete.url)} 
+            <Image unoptimized width={300} height={300}
+              src={getImageUrl(tileToDelete.url)}
               alt="Image to delete"
               className="w-full h-64 object-contain rounded mb-4 bg-gray-100"
             />

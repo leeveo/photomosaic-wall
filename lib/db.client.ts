@@ -33,8 +33,9 @@ export async function saveSetup(slug: string, image: string, rows: number, cols:
 /* 🔹 Uploader une image dans Supabase Storage */
 export async function uploadImage(base64: string, slug: string): Promise<string> {
   const fileName = `${slug}-${Date.now()}.jpg`
-  const base64Data = base64.split(',')[1]
-  const fileBuffer = Buffer.from(base64Data, 'base64')
+  const response = await fetch(base64)
+  if (!response.ok) throw new Error('Image illisible')
+  const fileBuffer = await response.blob()
 
   const { error: uploadError } = await supabase.storage
     .from('tiles')
@@ -80,7 +81,7 @@ export async function loadTiles(slug: string) {
 
   if (error) {
     console.error('Erreur loadTiles:', error)
-    return []
+    throw error
   }
 
   return data || []

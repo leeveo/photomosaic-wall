@@ -1,5 +1,8 @@
 'use client'
 
+import EnvironmentGate from '@/components/EnvironmentGate'
+import Brand from '@/components/Brand'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTiles } from '@/lib/db.client'
@@ -61,7 +64,9 @@ type ProjectDetails = {
   photosCount?: number;
 }
 
-export default function AdminPage() {
+function AdminPageContentWrapper() {
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'projects' | 'photos' | 'stats' | 'setup' | 'flyer' | 'design'>('projects')
   const [selectedProject, setSelectedProject] = useState('all')
   const [projects, setProjects] = useState<MosaicMeta[]>([])
@@ -82,7 +87,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     const fetchAll = async () => {
-      const { data: projectsRaw } = await supabase.from('projects').select('slug, title, created_at')
+      const { data: projectsRaw, error } = await supabase.from('projects').select('slug, title, created_at')
+      if (error) throw error
       if (!projectsRaw) return
 
       const enriched: MosaicMeta[] = []
@@ -114,7 +120,7 @@ export default function AdminPage() {
       setTiles(allTiles || [])
     }
 
-    fetchAll()
+    fetchAll().catch(() => setLoadError('Impossible de charger les projets. Vérifiez la connexion et réessayez.')).finally(() => setIsLoading(false))
   }, [])
 
   const deleteTile = async (tileId: string, imageUrl: string) => {
@@ -412,7 +418,7 @@ export default function AdminPage() {
           </div>
           {projects.length === 0 ? (
             <div className="text-center py-8 border border-gray-200 rounded-lg">
-              <p className="text-gray-500 mb-4">Aucun projet trouvé</p>
+              <p className="text-gray-500 mb-4">Votre prochaine belle histoire commence ici.</p><button className="btn-primary" onClick={() => setActiveTab('setup')}>Créer mon premier événement</button>
             </div>
           ) :
           (
@@ -701,7 +707,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="admin-shell flex h-screen bg-gray-100">
       {/* Sidebar - responsive */}
       <div
         className={`${
@@ -709,7 +715,7 @@ export default function AdminPage() {
         } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-20 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
       >
         <div className="p-6">
-          <h1 className="text-2xl font-semibold text-indigo-600">Fillow.</h1>
+          <Brand />
           <p className="text-sm text-gray-500">Administration</p>
         </div>
         <nav className="mt-6 flex flex-col gap-2 text-sm">
@@ -724,7 +730,7 @@ export default function AdminPage() {
           </div>
           {/* Main navigation items */}
           {[
-            { label: 'Dashboard', icon: <FiGrid />, tab: 'projects' },
+            { label: 'Mes événements', icon: <FiGrid />, tab: 'projects' },
             { label: 'Créer Projet', icon: <FiPlusCircle />, tab: 'setup' },
             { label: 'Photos', icon: <FiImage />, tab: 'photos' },
             { label: 'Stats', icon: <FiBarChart2 />, tab: 'stats' },
@@ -790,12 +796,13 @@ export default function AdminPage() {
               </svg>
             </button>
             <h2 className="font-semibold text-xl text-gray-800">
-              Dashboard
+              Votre studio événementiel
             </h2>
           </div>
         </header>
         <main className="p-6">
-          {activeTab === 'projects' ? renderDashboard() : renderContent()}
+          {loadError && <p role="alert" className="wall-error">{loadError}</p>}
+          {isLoading ? <p role="status" className="wall-panel p-8">Chargement de vos événements…</p> : activeTab === 'projects' ? renderDashboard() : renderContent()}
         </main>
       </div>
 
@@ -954,4 +961,8 @@ export default function AdminPage() {
       )}
     </div>
   )
+}
+
+export default function AdminPage() {
+  return <EnvironmentGate><AdminPageContentWrapper /></EnvironmentGate>
 }

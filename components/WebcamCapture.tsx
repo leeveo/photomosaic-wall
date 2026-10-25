@@ -1,6 +1,6 @@
 'use client'
 
-import { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react'
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 
 export type WebcamCaptureHandle = {
@@ -23,7 +23,6 @@ const WebcamCapture = forwardRef<WebcamCaptureHandle, Props>(({ countdown }, ref
         if (!screenshot) return resolve('')
 
         const img = new Image()
-        img.src = screenshot
         img.onload = () => {
           const size = Math.min(img.width, img.height)
           const canvas = document.createElement('canvas')
@@ -38,15 +37,11 @@ const WebcamCapture = forwardRef<WebcamCaptureHandle, Props>(({ countdown }, ref
           resolve(canvas.toDataURL('image/jpeg'))
         }
         img.onerror = () => resolve('')
+        img.src = screenshot
       })
     }
   }))
 
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then(() => setHasWebcamAccess(true))
-      .catch(() => setHasWebcamAccess(false))
-  }, [facingMode])
 
   if (!hasWebcamAccess) {
     return (
@@ -60,6 +55,8 @@ const WebcamCapture = forwardRef<WebcamCaptureHandle, Props>(({ countdown }, ref
     <div className="relative w-full max-w-[600px] aspect-square border-4 border-white rounded-lg overflow-hidden bg-black">
       <Webcam
         ref={webcamRef}
+        onUserMedia={() => setHasWebcamAccess(true)}
+        onUserMediaError={() => setHasWebcamAccess(false)}
         audio={false}
         screenshotFormat="image/jpeg"
         videoConstraints={{
@@ -71,7 +68,7 @@ const WebcamCapture = forwardRef<WebcamCaptureHandle, Props>(({ countdown }, ref
         className="w-full h-full object-cover"
       />
 
-      {countdown !== null && (
+      {countdown != null && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-20">
           <span className="text-white text-6xl sm:text-8xl font-bold">{countdown}</span>
         </div>

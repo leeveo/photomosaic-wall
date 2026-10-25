@@ -1,9 +1,11 @@
 'use client'
 
+import EnvironmentGate from '@/components/EnvironmentGate'
+
 import { Suspense } from 'react'
 import PhotoPage from '@/components/PhotoPage'
 
-export default function PhotoPageWrapper() {
+function PhotoPageWrapperContentWrapper() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-md">
@@ -13,4 +15,8 @@ export default function PhotoPageWrapper() {
       <PhotoPage />
     </Suspense>
   )
+}
+
+export default function PhotoPageWrapper() {
+  return <EnvironmentGate><PhotoPageWrapperContentWrapper /></EnvironmentGate>
 }

@@ -27,9 +27,7 @@ export default function CreateProject() {
   const [eventDate, setEventDate] = useState<string>('') // New state for event date
   const [isModalOpen, setIsModalOpen] = useState(false) // State for modal visibility
   const [step, setStep] = useState(0); // Wizard step state - FIX: added missing semicolon
-  /* eslint-disable @typescript-eslint/no-unused-vars */
-  const [_unused, setCreatedSlug] = useState<string | null>(null);
-  /* eslint-enable @typescript-eslint/no-unused-vars  */
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
   const [projectCreated, setProjectCreated] = useState(false) // Ajout: savoir si le projet est créé
   
   // Additional fields for FlyerGenerator
@@ -62,7 +60,7 @@ export default function CreateProject() {
     if (!imageSize || !selectedFormat) return
     const imageRatio = imageSize.width / imageSize.height
     const labelRatio = selectedFormat.widthMM / selectedFormat.heightMM
-    const calculatedCols = Math.round(rows * imageRatio * labelRatio)
+    const calculatedCols = Math.max(1, Math.min(500, Math.round(rows * imageRatio / labelRatio)))
     setCols(calculatedCols)
   }, [rows, selectedFormat, imageSize])
 
@@ -75,7 +73,6 @@ export default function CreateProject() {
 
     // Fix: Use window.Image() to avoid confusion with the imported Next.js Image component
     const img = new window.Image()
-    img.src = localPreview
     img.onload = () => {
       canvas.width = img.width
       canvas.height = img.height
@@ -103,6 +100,7 @@ export default function CreateProject() {
         ctx.stroke()
       }
     }
+    img.src = localPreview
   }, [localPreview, rows, cols, imageSize])
 
   useEffect(() => {
@@ -118,7 +116,6 @@ export default function CreateProject() {
       const result = reader.result as string
       // Fix: Use window.Image() here as well
       const img = new window.Image()
-      img.src = result
       img.onload = async () => {
         const maxWidth = 800
         const scale = img.width > maxWidth ? maxWidth / img.width : 1
@@ -133,30 +130,12 @@ export default function CreateProject() {
         const compressed = canvas.toDataURL('image/jpeg', 0.7)
         setLocalPreview(compressed) // Use the compressed variable
 
-        // Upload the image to Supabase storage
-        const filename = `${slug}-${Date.now()}.jpg`
-        const { /* data */ error } = await supabase.storage
-          .from('backgrounds')
-          .upload(filename, file, {
-            cacheControl: '3600',
-            upsert: true,
-          })
-
-        if (!error) {
-          const { data: urlData } = supabase.storage
-            .from('backgrounds')
-            .getPublicUrl(filename)
-
-          if (urlData?.publicUrl) {
-            setLocalPreview(compressed) // Use compressed here instead of later URL
-          }
-        } else {
-          alert('Erreur lors de l’upload de l’image.')
-        }
-
         setImageSize({ width: canvas.width, height: canvas.height })
       }
+      img.onerror = () => alert('Le fichier sélectionné n’est pas une image valide.')
+      img.src = result
     }
+    reader.onerror = () => alert('Impossible de lire ce fichier.')
     reader.readAsDataURL(file)
   }
 
@@ -165,7 +144,6 @@ export default function CreateProject() {
     return {
       // Project setup data
       project_slug: slug,
-      title,
       image: localPreview,
       rows,
       cols,
@@ -234,9 +212,11 @@ export default function CreateProject() {
     }
     // Vérifier si le projet existe déjà
     const existing = await supabase.from('projects').select().eq('slug', slug).maybeSingle();
+    if (existing.error) { alert('Impossible de vérifier la disponibilité de cet identifiant.'); return false; }
     if (existing.data) {
-      setProjectCreated(true);
-      return true; // Le projet existe déjà
+      if (createdSlug === slug) return true;
+      alert('Cet identifiant est déjà utilisé. Choisissez-en un autre pour préserver le projet existant.');
+      return false;
     }
     // Créer le projet
     const { error: errProject } = await supabase.from('projects').insert([{ slug, title }]);
@@ -245,6 +225,7 @@ export default function CreateProject() {
       return false;
     }
     setProjectCreated(true);
+    setCreatedSlug(slug);
     return true;
   };
 
@@ -255,18 +236,16 @@ export default function CreateProject() {
     }
 
     // S'assurer que le projet existe (sécurité)
-    if (!projectCreated) {
+    if (!projectCreated || createdSlug !== slug) {
       const ok = await handleCreateProjectOnly();
       if (!ok) return;
     }
 
-    // Nettoyer les setups précédents
-    await supabase.from('setups').delete().eq('project_slug', slug);
 
     // Collecter toutes les données personnalisées
     const setupData = collectCustomizedData();
 
-    const { error: errSetup } = await supabase.from('setups').insert([setupData]);
+    const { error: errSetup } = await supabase.from('setups').upsert([setupData]);
 
     if (errSetup) {
       console.error('Error saving setup data:', errSetup);
@@ -338,10 +317,12 @@ export default function CreateProject() {
     const { error: flyerError } = await supabase.from('flyers').upsert(flyerData, { onConflict: 'project_slug' });
     if (flyerError) {
       console.error('Error saving flyer data:', flyerError);
+      alert('Impossible d’enregistrer le flyer. Réessayez.');
+      return;
     }
 
     // Appeler la sauvegarde finale (setups, etc)
-    handleCreate();
+    await handleCreate();
   };
 
   // Wizard steps rendering
@@ -528,13 +509,13 @@ export default function CreateProject() {
                         <input
                           type="number"
                           value={rows}
-                          onChange={(e) => setRows(Number(e.target.value))}
+                          onChange={(e) => setRows(Math.max(1, Math.min(50, Math.floor(Number(e.target.value)) || 1)))}
                           min={1}
                           className="h-10 w-16 border-y border-purple-200 text-center focus:outline-none text-lg font-semibold text-purple-800"
                         />
                         <button 
                           className="h-10 w-10 rounded-r-lg bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center justify-center"
-                          onClick={() => setRows(rows + 1)}
+                          onClick={() => setRows(Math.min(50, rows + 1))}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -773,7 +754,7 @@ function GridReference({
     
     // Scale: 1mm = 10px for better detail on screen and print
     // This creates a high-resolution image that properly scales when printed
-    const SCALE_FACTOR = 10;
+    const SCALE_FACTOR = Math.min(10, 4096 / Math.max(formatWidthMM * cols, formatHeightMM * rows));
     
     // Set canvas size based on real dimensions (10px = 1mm for better resolution)
     canvas.width = formatWidthMM * cols * SCALE_FACTOR;

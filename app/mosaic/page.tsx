@@ -1,5 +1,7 @@
 'use client'
 
+import EnvironmentGate from '@/components/EnvironmentGate'
+
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import MosaicCanvas from '@/components/MosaicCanvas'
@@ -30,7 +32,8 @@ function MosaicPageContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const store = usePhotoMosaicStore()
+  const setImage = usePhotoMosaicStore(state => state.setImage)
+  const setGrid = usePhotoMosaicStore(state => state.setGrid)
   const mainRef = useRef<HTMLDivElement>(null)
 
   // Plein écran states
@@ -46,7 +49,10 @@ function MosaicPageContent() {
   }, [searchParams])
 
   useEffect(() => {
-    let interval: NodeJS.Timeout
+    let interval: ReturnType<typeof setTimeout> | undefined
+    let cancelled = false
+    setLoading(true)
+    setError(null)
 
     const fetchData = async () => {
       if (!slug) {
@@ -66,8 +72,9 @@ function MosaicPageContent() {
         return
       }
 
-      store.setImage(setup.image)
-      store.setGrid(setup.rows, setup.cols)
+      if (cancelled) return
+      setImage(setup.image)
+      setGrid(setup.rows, setup.cols)
 
       const updateTiles = async () => {
         const loadedTiles = await loadTiles(slug)
@@ -76,30 +83,37 @@ function MosaicPageContent() {
           row: tile.row,
           col: tile.col,
         }))
-        setTiles(formatted)
+        if (!cancelled) setTiles(formatted)
       }
 
       await updateTiles()
 
       // ✅ Rafraîchissement toutes les 5 secondes
-      interval = setInterval(updateTiles, 5000)
+      const poll = async () => {
+        try { await updateTiles() }
+        catch { if (!cancelled) setError('Impossible d’actualiser les photos. Rechargez la page pour réessayer.') }
+        if (!cancelled) interval = setTimeout(poll, 5000)
+      }
+      if (!cancelled) interval = setTimeout(poll, 5000)
 
       setLoading(false)
     }
 
-    fetchData()
+    fetchData().catch(() => { if (!cancelled) setError('Impossible de charger cet événement.') })
 
-    return () => clearInterval(interval)
-  }, [slug, router, store])
+    return () => { cancelled = true; clearTimeout(interval) }
+  }, [slug, router, setImage, setGrid])
 
   // Gestion du fullscreen
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
+    try {
     if (!mainRef.current) return
     if (document.fullscreenElement) {
-      document.exitFullscreen()
+      await document.exitFullscreen()
     } else {
-      mainRef.current.requestFullscreen()
+      await mainRef.current.requestFullscreen()
     }
+    } catch { setError('Le navigateur n’a pas autorisé le plein écran.') }
   }
 
   // Ecouteur pour l'état fullscreen
@@ -121,13 +135,13 @@ function MosaicPageContent() {
     return { background: '#18181b' }
   }
 
-  if (loading) return <p>Chargement...</p>
-  if (error) return <p style={{ color: 'red' }}>{error}</p>
+  if (error) return <p role="alert" className="wall-error">{error}</p>
+  if (loading) return <p className="connection-page">Chargement de la mosaïque…</p>
 
   return (
     <div
       ref={mainRef}
-      className="min-h-screen py-6 px-6"
+      className="min-h-screen"
       style={getBackgroundStyle()}
     >
       {/* Fullscreen Button - Always visible when supported */}
@@ -185,10 +199,14 @@ function MosaicPageContent() {
   )
 }
 
-export default function MosaicPage() {
+function MosaicPageContentWrapper() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Chargement de la mosaïque...</div>}>
       <MosaicPageContent />
     </Suspense>
   )
+}
+
+export default function MosaicPage() {
+  return <EnvironmentGate><MosaicPageContentWrapper /></EnvironmentGate>
 }

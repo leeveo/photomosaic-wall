@@ -1,27 +1,11 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "../globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+import type { Metadata } from 'next'
+import '../globals.css'
 
 export const metadata: Metadata = {
-  title: "Photomosaic App",
-  description: "Créez votre mur photo interactif",
-};
+  title: 'PhotoMosaic — Studio événementiel',
+  description: 'Des photos individuelles, un souvenir collectif. Créez et animez votre mur photo.',
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="fr">
-      <body className={`${inter.variable} antialiased bg-black text-white`}>
-        {children}
-      </body>
-    </html>
-  );
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return <html lang="fr"><body>{children}</body></html>
 }

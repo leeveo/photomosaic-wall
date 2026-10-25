@@ -10,7 +10,7 @@
   "preview": "npm run build && next start",
   "check": "tsc --noEmit && eslint .",
   "predeploy": "npm run check && npm run preview",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

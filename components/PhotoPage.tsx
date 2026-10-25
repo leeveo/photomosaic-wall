@@ -5,8 +5,10 @@ import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import WebcamCapture, { WebcamCaptureHandle } from '@/components/WebcamCapture'
 import { usePhotoMosaicStore } from '@/lib/store'
-import { uploadImage, saveTile, loadTiles } from '@/lib/db.client'
+import { reserveTile, submitReservedTile, type TileReservation, loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
+import { ensureEventAccess } from '@/lib/guest'
+import { resolveMedia } from '@/lib/media'
 import Image from 'next/image'
 
 type MosaicTile = { src: string; row: number; col: number }
@@ -33,7 +35,7 @@ function PhotoPageForProject() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [capturedImage, setCapturedImage] = useState<string | null>(null)
-  const [previewTile, setPreviewTile] = useState<{ row: number; col: number } | null>(null)
+  const [previewTile, setPreviewTile] = useState<TileReservation | null>(null)
   const [confirmed, setConfirmed] = useState(false)
   const [design, setDesign] = useState<BoothConfig | null>(null)
   const [totalTiles, setTotalTiles] = useState(0)
@@ -48,6 +50,7 @@ function PhotoPageForProject() {
     const init = async () => {
       if (!slug) return router.push('/admin')
 
+      await ensureEventAccess(slug)
       const { data: setup, error } = await supabase
         .from('setups')
         .select('rows, cols, image')
@@ -56,23 +59,11 @@ function PhotoPageForProject() {
 
       if (error || !setup) {
         console.error('Erreur setup:', error)
-        return router.push(`/setup?id=${slug}`)
+        throw new Error('Event unavailable')
       }
 
-      let imageUrl = setup.image || ''
-      if (!imageUrl) throw new Error('L’image de la mosaïque est manquante.')
-
-      if (!imageUrl.startsWith('http') && !imageUrl.startsWith('data:image')) {
-        const { data: publicUrlData } = supabase.storage
-          .from('backgrounds')
-          .getPublicUrl(imageUrl)
-        imageUrl = publicUrlData?.publicUrl || ''
-      }
-
-      if (!imageUrl) {
-        console.error('Image introuvable ou invalide.')
-        return
-      }
+      const imageUrl = await resolveMedia(setup.image)
+      if (!imageUrl) throw new Error('Image unavailable')
 
       if (cancelled) return
       setImage(imageUrl)
@@ -93,7 +84,7 @@ function PhotoPageForProject() {
       if (dsgn) {
         setDesign({
           backgroundColor: dsgn.background_color || '#000000',
-          backgroundImage: dsgn.background_image || '',
+          backgroundImage: await resolveMedia(dsgn.background_image),
           buttonColor: dsgn.button_color || '#16a34a',
           stepTexts: {
             step1: dsgn.step1_text || 'Prêt à commencer ?',
@@ -135,7 +126,7 @@ function PhotoPageForProject() {
         const free = availablePositions(store.rows, store.cols, tiles)
         if (!free.length) throw new Error('Cette mosaïque est complète. Merci pour votre participation !')
         setCapturedImage(base64)
-        setPreviewTile(free[Math.floor(Math.random() * free.length)])
+        setPreviewTile(await reserveTile(slug!))
         setStep(3)
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : 'La capture a échoué.')
@@ -151,13 +142,12 @@ function PhotoPageForProject() {
     setErrorMessage(null)
     try {
       if (!capturedImage || !previewTile || !slug) {
-        console.warn('Données manquantes pour valider:', { capturedImage, previewTile, slug })
         return
       }
 
       const finalImage = await applyMosaicOverlay(capturedImage, previewTile.row, previewTile.col)
-      const imageUrl = await uploadImage(finalImage, slug)
-      await saveTile(slug, previewTile.row, previewTile.col, imageUrl)
+      const result = await submitReservedTile(previewTile, finalImage)
+      const imageUrl = result.image_url
 
       setTiles(prev => [...prev, { src: imageUrl, row: previewTile.row, col: previewTile.col }])
       setConfirmed(true)

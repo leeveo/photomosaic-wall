@@ -8,6 +8,8 @@ import MosaicCanvas from '@/components/MosaicCanvas'
 import { usePhotoMosaicStore } from '@/lib/store'
 import { loadTiles } from '@/lib/db.client'
 import { supabase } from '@/lib/supabase'
+import { ensureEventAccess } from '@/lib/guest'
+import { resolveMedia } from '@/lib/media'
 import { motion } from 'framer-motion'
 
 type MosaicTile = {
@@ -48,6 +50,7 @@ function MosaicPageContent() {
   useEffect(() => {
     let interval: ReturnType<typeof setTimeout> | undefined
     let cancelled = false
+    let channel: ReturnType<typeof supabase.channel> | undefined
 
     const fetchData = async () => {
       if (!slug) {
@@ -56,6 +59,7 @@ function MosaicPageContent() {
         return
       }
 
+      await ensureEventAccess(slug)
       const { data: setup, error: errSetup } = await supabase
         .from('setups')
         .select('image, rows, cols')
@@ -68,7 +72,7 @@ function MosaicPageContent() {
       }
 
       if (cancelled) return
-      setImage(setup.image)
+      setImage(await resolveMedia(setup.image))
       setGrid(setup.rows, setup.cols)
 
       const updateTiles = async () => {
@@ -82,6 +86,7 @@ function MosaicPageContent() {
       }
 
       await updateTiles()
+      if (!cancelled) channel = supabase.channel(`mosaic-${slug}`).on('postgres_changes', { event: '*', schema: 'public', table: 'tiles', filter: `project_slug=eq.${slug}` }, () => { void updateTiles().catch(() => {}) }).subscribe()
 
       // ✅ Rafraîchissement toutes les 5 secondes
       const poll = async () => {
@@ -96,7 +101,7 @@ function MosaicPageContent() {
 
     fetchData().catch(() => { if (!cancelled) setError('Impossible de charger cet événement.') })
 
-    return () => { cancelled = true; clearTimeout(interval) }
+    return () => { cancelled = true; clearTimeout(interval); if (channel) void supabase.removeChannel(channel) }
   }, [slug, router, setImage, setGrid])
 
   // Gestion du fullscreen

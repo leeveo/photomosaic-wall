@@ -1,9 +1,12 @@
-import { T, useLanguage } from '@/components/LanguageProvider'
-import React, { useCallback, useEffect } from 'react'
+import { useLanguage } from '@/components/LanguageProvider'
+import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { resolveMedia } from '@/lib/media'
+import { zipSync } from 'fflate'
 
 type Tile = {
+  moderation_status?: string
   id: string
   image_url: string
   row: number
@@ -36,203 +39,46 @@ type Props = {
   deleteTile: (tileId: string, imageUrl: string) => Promise<void>
 }
 
-const PhotosTab: React.FC<Props> = ({
-  tiles,
-  projects,
-  selectedProject,
-  setSelectedProject,
-  setTiles,
-  setTileToDelete,
-  setShowDeleteModal,
-  showDeleteModal,
-  tileToDelete,
-  deleteTile,
-}) => {
-  const { t } = useLanguage()
-  // Direct rendering approach without processing URLs
-  const filteredTiles = selectedProject === 'all'
-    ? tiles
-    : tiles.filter(tile => tile.project_slug === selectedProject);
-
-  const refreshTiles = useCallback(async () => {
+export default function PhotosTab({ projects, selectedProject, setSelectedProject, deleteTile }: Props) {
+  const { language } = useLanguage()
+  const tr = (fr: string, en: string) => language === 'fr' ? fr : en
+  const [photos, setPhotos] = useState<Tile[]>([])
+  const [page, setPage] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [status, setStatus] = useState('all')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const refresh = useCallback(async () => {
+    setLoading(true)
     try {
-      const { data: allTiles, error } = await supabase.from('tiles').select('*');
-
-      if (error) {
-        console.error("Error fetching tiles:", error);
-        return;
-      }
-
-      console.log("Fetched tiles:", allTiles);
-      setTiles(allTiles || []);
-    } catch (err) {
-      console.error("Error in refreshTiles:", err);
-    }
-  }, [setTiles]);
-
-  // Load tiles on mount
-  useEffect(() => {
-    refreshTiles();
-  }, [refreshTiles]);
-
-  const handlePrint = async (imageUrl: string) => {
-    try {
-      const res = await fetch(imageUrl)
-      const blob = await res.blob()
-      const buffer = await blob.arrayBuffer()
-      const base64 = btoa(
-        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-      )
-
-      const response = await fetch('http://localhost:4000/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          base64,
-          jobName: 'photo_' + Date.now()
-        })
-      })
-
-      if (!response.ok) {
-        const err = await response.text()
-        alert(t("❌ Erreur impression : ") + err)
-      } else {
-        alert(t("🖨️ Impression lancée avec succès"))
-      }
-    } catch (err) {
-      console.error(err)
-      alert(t("Erreur lors de la préparation à l’impression."))
-    }
+      let query = supabase.from('tiles').select('*', { count: 'exact' }).order('created_at', { ascending: false }).order('id').range(page * 48, page * 48 + 47)
+      if (selectedProject !== 'all') query = query.eq('project_slug', selectedProject)
+      if (status !== 'all') query = query.eq('moderation_status', status)
+      const { data, count, error } = await query
+      if (error) throw error
+      const signed = await Promise.all((data || []).map(async tile => ({ ...tile, image_url: await resolveMedia(tile.image_url) })))
+      setPhotos(signed); setTotal(count || 0); setMessage('')
+    } catch { setMessage(language === 'fr' ? 'Impossible de charger les photos.' : 'Unable to load photos.') }
+    finally { setLoading(false) }
+  }, [page, selectedProject, status, language])
+  useEffect(() => { const timer = setTimeout(() => void refresh(), 0); return () => clearTimeout(timer) }, [refresh])
+  const moderate = async (tile: Tile, value: string) => {
+    setBusy(true)
+    try { const { error } = await supabase.from('tiles').update({ moderation_status: value }).eq('id', tile.id); if (error) throw error; await refresh() }
+    catch { setMessage(tr('Modification impossible.', 'Unable to save changes.')) }
+    finally { setBusy(false) }
   }
-
-  // Function to get full image URL directly
-  const getImageUrl = (filename: string): string => {
-    if (/^(https?:|data:image)/.test(filename)) return filename;
-    return supabase.storage.from('tiles').getPublicUrl(filename).data.publicUrl;
-  };
-
-  return (
-    <section className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6 text-black"><T text={"🖼️ Photos par projet"} /></h2>
-
-      {/* Controls for project selection */}
-      <div className="bg-white shadow rounded-lg p-6 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-0"><T text={"Filtrer par projet :"} /></label>
-          <select
-            id="project-select"
-            value={selectedProject}
-            onChange={e => setSelectedProject(e.target.value)}
-            className="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-100"
-          >
-            <option value="all"><T text={"📦 Tous les projets"} /></option>
-            {projects.map(p => (
-              <option key={p.slug} value={p.slug}>
-                {p.title} ({p.tilesCount})
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={refreshTiles}
-            className="inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          ><T text={"🔄 Actualiser"} /></button>
-        </div>
-
-        {filteredTiles.length === 0 ? (
-          <div className="text-center py-12 text-gray-500"><T text={"Aucune photo trouvée pour ce projet."} /></div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-            {filteredTiles.map(tile => {
-              // Generate the full URL directly
-              const fullImageUrl = getImageUrl(tile.image_url);
-
-              return (
-                <div
-                  key={tile.id}
-                  className="relative rounded-md overflow-hidden group bg-gray-50 shadow-xl hover:shadow-2xl transition"
-                >
-                  {/* Use regular img tag for simplicity */}
-                  <Image unoptimized width={300} height={300}
-                    src={fullImageUrl}
-                    alt={`Photo ${tile.project_slug} ${String.fromCharCode(65 + tile.row)}-${tile.col + 1}`}
-                    className="w-full aspect-square object-cover rounded-t-md"
-                    onError={(e) => {
-                      console.error("Image failed to load:", fullImageUrl);
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.alt = 'Photo indisponible';
-                    }}
-                  />
-
-                  <div className="absolute top-2 left-2 px-3 py-1 rounded-lg shadow-lg font-mono text-xs font-semibold bg-white/70 backdrop-blur-md text-gray-800 border border-white/60 flex flex-col items-start transition-all">
-                    <span className="uppercase tracking-wide text-[11px] font-bold text-blue-700">{tile.project_slug}</span>
-                    <span className="text-[11px] font-semibold text-gray-700">{String.fromCharCode(65 + tile.row)}-{tile.col + 1}</span>
-                  </div>
-                  <div className="absolute bottom-1 left-1 right-1 flex justify-between px-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition">
-                    <button
-                      aria-label="Imprimer la photo"
-                      onClick={() => handlePrint(fullImageUrl)}
-                      className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full text-xs shadow hover:from-blue-600 hover:to-purple-700"
-                    >
-                      🖨️
-                    </button>
-                    <button
-                      aria-label="Supprimer la photo"
-                      onClick={() => {
-                        setTileToDelete({ id: tile.id, url: tile.image_url })
-                        setShowDeleteModal(true)
-                      }}
-                      className="p-2 bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-full text-xs shadow hover:from-red-600 hover:to-pink-700"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Delete modal with simplified image display */}
-      {showDeleteModal && tileToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-[90%] max-w-sm p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-800"><T text={"Supprimer cette image ?"} /></h3>
-            {/* Use img tag for simplicity */}
-            <Image unoptimized width={300} height={300}
-              src={getImageUrl(tileToDelete.url)}
-              alt="Image to delete"
-              className="w-full h-64 object-contain rounded mb-4 bg-gray-100"
-            />
-            <div className="text-right space-x-3">
-              <button
-                onClick={async () => {
-                  try {
-                    setShowDeleteModal(false);
-                    if (!tileToDelete) return;
-                    await deleteTile(tileToDelete.id, tileToDelete.url);
-                    setTileToDelete(null);
-                    setTiles(tiles.filter(tile => tile.id !== tileToDelete.id));
-                  } catch (err) {
-                    console.error("Error deleting tile:", err);
-                    alert(t("Erreur lors de la suppression de l'image."));
-                  }
-                }}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-gradient-to-br from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 shadow"
-              ><T text={"Supprimer"} /></button>
-              <button
-                onClick={() => {
-                  setTileToDelete(null)
-                  setShowDeleteModal(false)
-                }}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white text-gray-700 hover:bg-gray-50 shadow"
-              ><T text={"Annuler"} /></button>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
-  );
-};
-
-export default PhotosTab;
+  const exportPage = async () => {
+    setBusy(true)
+    try {
+      const files: Record<string, Uint8Array> = {}
+      for (const tile of photos) { const result = await fetch(tile.image_url); if (!result.ok) throw new Error(); files[`${tile.project_slug}/${tile.row}-${tile.col}-${tile.id}.jpg`] = new Uint8Array(await result.arrayBuffer()) }
+      const bytes = zipSync(files, { level: 0 })
+      const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: 'application/zip' }))
+      const link = document.createElement('a'); link.href = url; link.download = `photomosaic-page-${page + 1}.zip`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch { setMessage(tr('Export impossible. Actualisez les photos et réessayez.', 'Export failed. Refresh photos and try again.')) }
+    finally { setBusy(false) }
+  }
+  return <section><div className="event-tools"><label>{tr('Événement', 'Event')}<select value={selectedProject} onChange={e => { setPage(0); setSelectedProject(e.target.value) }}><option value="all">{tr('Tous mes événements', 'All my events')}</option>{projects.map(p => <option key={p.slug} value={p.slug}>{p.title}</option>)}</select></label><label>{tr('Statut', 'Status')}<select value={status} onChange={e => { setPage(0); setStatus(e.target.value) }}>{[['all',tr('Toutes','All')],['pending',tr('À valider','Pending')],['approved',tr('Approuvées','Approved')],['rejected',tr('Refusées','Rejected')]].map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label><button onClick={() => void refresh()} disabled={loading}>{tr('Actualiser','Refresh')}</button><button disabled={busy || loading || !photos.length} onClick={() => void exportPage()}>{tr('Exporter cette page (ZIP)','Export this page (ZIP)')}</button></div><p role="status">{message || (loading ? tr('Chargement…','Loading…') : `${total} photos`)}</p><div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">{photos.map(tile => <article key={tile.id}><Image unoptimized width={300} height={300} src={tile.image_url} alt={`${tile.project_slug} ${tile.row + 1}-${tile.col + 1}`} className="w-full aspect-square object-cover rounded-xl" /><div className="event-tools"><span>{tile.row + 1} / {tile.col + 1}</span><button disabled={busy || tile.moderation_status === 'approved'} onClick={() => void moderate(tile, 'approved')}>{tr('Approuver','Approve')}</button><button disabled={busy || tile.moderation_status === 'rejected'} onClick={() => void moderate(tile, 'rejected')}>{tr('Refuser','Reject')}</button><button disabled={busy} onClick={async () => { if (!window.confirm(tr('Supprimer cette photo ?','Delete this photo?'))) return; setBusy(true); try { await deleteTile(tile.id, tile.image_url); await refresh() } catch { setMessage(tr('Suppression impossible.','Unable to delete photo.')) } finally { setBusy(false) } }}>{tr('Supprimer','Delete')}</button></div></article>)}</div><div className="event-tools"><button disabled={page === 0 || loading} onClick={() => setPage(p => p - 1)}>{tr('Précédent','Previous')}</button><span>{page + 1} / {Math.max(1,Math.ceil(total / 48))}</span><button disabled={(page + 1) * 48 >= total || loading} onClick={() => setPage(p => p + 1)}>{tr('Suivant','Next')}</button></div></section>
+}

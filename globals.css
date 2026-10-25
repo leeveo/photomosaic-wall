@@ -265,3 +265,15 @@ h2 { letter-spacing:-.8px; }.section-heading h2,.studio-cta h2 { font-size:clamp
 .studio-editor .mockup-preview :is(p,button) { font-size:clamp(7px,3cqw,13px); padding:4px 8px; line-height:1.3; }
 .studio-editor .mockup-preview .space-y-4 { display:flex; flex-direction:column; align-items:center; gap:4px; }
 .studio-editor .mockup-preview .space-y-4>* { margin:0; }
+.auth-page { min-height:100dvh; padding:28px 6% 60px; background:radial-gradient(ellipse at 80% 10%,#e5dbfa,transparent 60%),#f7f5fb; }
+.auth-page>header { display:flex; justify-content:space-between; align-items:center; gap:20px; max-width:1200px; margin:auto; }
+.auth-card { width:100%; max-width:470px; margin:65px auto 0; padding:38px; border:1px solid #fff; border-radius:24px; background:linear-gradient(130deg,#ffffffeb,#ffffffa0); box-shadow:0 25px 70px #5e3b9510; }
+.auth-card h1 { font-size:32px; line-height:1.2; font-weight:700; letter-spacing:-1px; margin-bottom:16px; }.auth-card>p { color:#81728d; font-size:13px; line-height:1.8; }.auth-card form { display:flex; flex-direction:column; gap:20px; margin:28px 0; }.auth-card label { display:flex; flex-direction:column; gap:8px; font-size:12px; font-weight:600; color:#72617d; }.auth-card input { width:100%; min-height:48px; font-size:16px; }.auth-card small { font-size:11px; color:#8a7c95; }.auth-text-button { font-size:12px; color:#8253bc; padding:10px 0; }.auth-links { display:flex; flex-direction:column; gap:13px; font-size:12px; color:#83649c; margin-top:24px; }.auth-notice { border:1px solid #ddd2ed; border-radius:12px; padding:14px; background:#f3edf9; }.auth-card .btn-secondary { margin:12px 0; }
+@media(max-width:600px) { .auth-page { padding:20px 18px; }.auth-card { margin-top:42px; padding:26px; }.auth-card h1 { font-size:28px; } }
+
+.event-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: 1rem 0; font-size: .8rem; }
+.event-tools button, .event-tools a, .event-tools select { border: 1px solid #dce3f1; border-radius: .7rem; background: #fff9; color: #344568; padding: .55rem .75rem; overflow-wrap: anywhere; }
+.event-tools button:disabled { opacity: .45; cursor: default; }
+.event-tools label { display: grid; gap: .3rem; max-width: 100%; }
+.event-tools select { max-width: 100%; }
+.wall-nav { flex-wrap: wrap; }

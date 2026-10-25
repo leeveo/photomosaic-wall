@@ -4,6 +4,7 @@ import { T, useLanguage } from '@/components/LanguageProvider'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { resolveMedia, uploadBackground } from '@/lib/media'
 import { databaseErrorMessage } from '@/lib/database-errors'
 import { usePhotoMosaicStore } from '@/lib/store'
 import Modal from './Modal'
@@ -17,11 +18,15 @@ const LABEL_FORMATS = [
   { name: '100mm x 150mm', widthMM: 100, heightMM: 150 },
 ]
 
-export default function CreateProject() {
+export default function CreateProject({ initialSlug = '' }: { initialSlug?: string }) {
   const { t } = useLanguage()
   const { setImage, setGrid } = usePhotoMosaicStore()
 
-  const [slug, setSlug] = useState('')
+  const [slug, setSlug] = useState(initialSlug)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const savingRef = useRef(false)
+  const imageReference = useRef<string | null>(null)
   const [title, setTitle] = useState('')
   const [rows, setRows] = useState(5)
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null)
@@ -30,9 +35,7 @@ export default function CreateProject() {
   const [eventDate, setEventDate] = useState<string>('') // New state for event date
   const [isModalOpen, setIsModalOpen] = useState(false) // State for modal visibility
   const [step, setStep] = useState(0); // Wizard step state - FIX: added missing semicolon
-  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
-  const [projectCreated, setProjectCreated] = useState(false) // Ajout: savoir si le projet est créé
-  
+
   // Additional fields for FlyerGenerator
   const [flyerTitle, setFlyerTitle] = useState('Participez à notre mosaïque photo !')
   const [flyerSubtitle, setFlyerSubtitle] = useState('Scannez le QR code ci-dessous pour accéder au photobooth')
@@ -48,7 +51,7 @@ export default function CreateProject() {
   const [flyerBackground, setFlyerBackground] = useState('#4f46e5')
   const [flyerBackgroundImage, setFlyerBackgroundImage] = useState<string | null>(null)
   const [flyerBackgroundBlur, setFlyerBackgroundBlur] = useState(0)
-  
+
   // Additional fields for PhotoBoothCustomizer
   const [boothBackgroundColor, setBoothBackgroundColor] = useState('#000000')
   const [boothBackgroundImage, setBoothBackgroundImage] = useState('')
@@ -56,7 +59,7 @@ export default function CreateProject() {
   const [boothStep1Text, setBoothStep1Text] = useState('Prêt à commencer ?')
   const [boothStep2Text, setBoothStep2Text] = useState('Cadrez-vous bien !')
   const [boothStep3Text, setBoothStep3Text] = useState('Voici votre photo, voulez-vous la valider ?')
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const cols = imageSize && selectedFormat
@@ -127,6 +130,7 @@ export default function CreateProject() {
 
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
         const compressed = canvas.toDataURL('image/jpeg', 0.7)
+        imageReference.current = null
         setLocalPreview(compressed) // Use the compressed variable
 
         setImageSize({ width: canvas.width, height: canvas.height })
@@ -146,9 +150,9 @@ export default function CreateProject() {
       image: localPreview,
       rows,
       cols,
-      event_date: eventDate,
+      event_date: eventDate || null,
       label_format: JSON.stringify(selectedFormat), // Store the selected label format
-      
+
       // Flyer customization data
       flyer_title: flyerTitle,
       flyer_subtitle: flyerSubtitle,
@@ -164,7 +168,7 @@ export default function CreateProject() {
       flyer_background: flyerBackground,
       flyer_background_image: flyerBackgroundImage,
       flyer_background_blur: flyerBackgroundBlur,
-      
+
       // PhotoBooth customization data
       booth_background_color: boothBackgroundColor,
       booth_background_image: boothBackgroundImage,
@@ -203,126 +207,58 @@ export default function CreateProject() {
     setBoothStep3Text(data.stepTexts.step3);
   };
 
-  // Nouvelle fonction pour créer le projet (projects) uniquement
-  const handleCreateProjectOnly = async () => {
-    if (!slug || !title) {
-      alert(t("Veuillez remplir le nom et le slug du projet."));
-      return false;
+  useEffect(() => {
+    if (!initialSlug) return
+    let cancelled = false
+    supabase.from('projects').select('title,draft_data').eq('slug', initialSlug).single().then(async ({ data, error }) => {
+      if (error || !data) { if (!cancelled) setSaveError('Impossible de charger le brouillon.'); return }
+      const [setupResult, designResult, flyerResult] = await Promise.all([
+        supabase.from('setups').select('*').eq('project_slug', initialSlug).maybeSingle(),
+        supabase.from('designs').select('*').eq('project_slug', initialSlug).maybeSingle(),
+        supabase.from('flyers').select('*').eq('project_slug', initialSlug).maybeSingle(),
+      ])
+      if (setupResult.error || designResult.error || flyerResult.error) { if (!cancelled) setSaveError('Impossible de charger le brouillon.'); return }
+      const setup = setupResult.data || data.draft_data?.setup || {}
+      const design = designResult.data || data.draft_data?.design || {}
+      const flyer = flyerResult.data || data.draft_data?.flyer || {}
+      const preview = await resolveMedia(setup.image).catch(() => '')
+      if (cancelled) return
+      setTitle(data.title); setRows(setup.rows || 5); setEventDate(setup.event_date || '')
+      imageReference.current = setup.image || null; setLocalPreview(preview || null)
+      if (setup.label_format) { try { setSelectedFormat(JSON.parse(setup.label_format)) } catch {} }
+      setBoothBackgroundColor(design.background_color || '#000000'); setBoothBackgroundImage(design.background_image || '')
+      setBoothButtonColor(design.button_color || '#16a34a'); setBoothStep1Text(design.step1_text || ''); setBoothStep2Text(design.step2_text || ''); setBoothStep3Text(design.step3_text || '')
+      setFlyerTitle(flyer.title || ''); setFlyerSubtitle(flyer.subtitle || '')
+      setFlyerTitleColor(flyer.title_color || '#ffffff'); setFlyerTitleSize(flyer.title_size || '24'); setFlyerTitleFont(flyer.title_font || 'Arial'); setFlyerTitlePosition(flyer.title_position || 'top-center')
+      setFlyerSubtitleColor(flyer.subtitle_color || '#ffffff'); setFlyerSubtitleSize(flyer.subtitle_size || '16'); setFlyerSubtitleFont(flyer.subtitle_font || 'Arial'); setFlyerSubtitlePosition(flyer.subtitle_position || 'bottom-center')
+      setFlyerQrCodePosition(flyer.qr_code_position || 'middle-center'); setFlyerBackground(flyer.background || '#4f46e5'); setFlyerBackgroundImage(flyer.background_image || null); setFlyerBackgroundBlur(flyer.background_blur || 0)
+      if (preview) { const img = new window.Image(); img.onload = () => { if (!cancelled) setImageSize({ width: img.width, height: img.height }) }; img.src = preview }
+    })
+    return () => { cancelled = true }
+  }, [initialSlug])
+
+  const saveEvent = async (publish: boolean) => {
+    if (savingRef.current) return false
+    if (!slug.trim() || !title.trim() || (publish && (!localPreview || !eventDate))) {
+      setSaveError(t('Veuillez remplir tous les champs.')); return false
     }
-    // Vérifier si le projet existe déjà
-    const existing = await supabase.from('projects').select().eq('slug', slug).maybeSingle();
-    if (existing.error) { alert(t(databaseErrorMessage(existing.error))); return false; }
-    if (existing.data) {
-      if (createdSlug === slug) return true;
-      alert(t("Cet identifiant est déjà utilisé. Choisissez-en un autre pour préserver le projet existant."));
-      return false;
-    }
-    // Créer le projet
-    const { error: errProject } = await supabase.from('projects').insert([{ slug, title }]);
-    if (errProject) {
-      alert(t(databaseErrorMessage(errProject)));
-      return false;
-    }
-    setProjectCreated(true);
-    setCreatedSlug(slug);
-    return true;
-  };
-
-  const handleCreate = async () => {
-    if (!slug || !title || !localPreview || !eventDate) {
-      alert(t("Veuillez remplir tous les champs."));
-      return;
-    }
-
-    // S'assurer que le projet existe (sécurité)
-    if (!projectCreated || createdSlug !== slug) {
-      const ok = await handleCreateProjectOnly();
-      if (!ok) return;
-    }
-
-
-    // Collecter toutes les données personnalisées
-    const setupData = collectCustomizedData();
-
-    const { error: errSetup } = await supabase.from('setups').upsert([setupData]);
-
-    if (errSetup) {
-      console.error('Error saving setup data:', errSetup);
-      alert(t(databaseErrorMessage(errSetup)));
-      return;
-    }
-
-    setImage(localPreview);
-    setGrid(rows, cols);
-    setIsModalOpen(true);
-    setStep(1);
-  };
-
-  // Save data for current step before moving to next step
-  const handleNextStep = async () => {
-    // Si on passe de l'étape 0 à 1, il faut s'assurer que le projet existe AVANT d'aller plus loin
-    if (step === 0) {
-      // Créer le projet si pas déjà fait
-      const ok = await handleCreateProjectOnly();
-      if (!ok) return;
-      setStep(1);
-    } 
-    // Si on passe de l'étape 1 (Design) à l'étape 2 (Flyer), sauvegarder le design
-    else if (step === 1) {
-      // Sauvegarder le design du photobooth
-      const boothData = {
-        project_slug: slug,
-        background_color: boothBackgroundColor,
-        background_image: boothBackgroundImage,
-        button_color: boothButtonColor,
-        step1_text: boothStep1Text,
-        step2_text: boothStep2Text,
-        step3_text: boothStep3Text
-      };
-
-      // Upsert dans la table designs
-      const { error } = await supabase.from('designs').upsert(boothData, { onConflict: 'project_slug' });
-      if (error) {
-        console.error('Error saving booth design:', error);
-        alert(t(databaseErrorMessage(error)));
-        return;
-      }
-      setStep(2);
-    }
-  };
-
-  // Final save of all data
-  const handleFinalSave = async () => {
-    // Enregistrer le flyer
-    const flyerData = {
-      project_slug: slug,
-      title: flyerTitle,
-      subtitle: flyerSubtitle,
-      title_color: flyerTitleColor,
-      title_size: flyerTitleSize,
-      title_font: flyerTitleFont,
-      title_position: flyerTitlePosition,
-      subtitle_color: flyerSubtitleColor,
-      subtitle_size: flyerSubtitleSize,
-      subtitle_font: flyerSubtitleFont,
-      subtitle_position: flyerSubtitlePosition,
-      qr_code_position: flyerQrCodePosition,
-      background: flyerBackground,
-      background_image: flyerBackgroundImage,
-      background_blur: flyerBackgroundBlur
-    };
-
-    // Upsert dans la table flyers
-    const { error: flyerError } = await supabase.from('flyers').upsert(flyerData, { onConflict: 'project_slug' });
-    if (flyerError) {
-      console.error('Error saving flyer data:', flyerError);
-      alert(t(databaseErrorMessage(flyerError)));
-      return;
-    }
-
-    // Appeler la sauvegarde finale (setups, etc)
-    await handleCreate();
-  };
+    savingRef.current = true; setSaving(true); setSaveError('')
+    try {
+      const image = imageReference.current || (localPreview ? await uploadBackground(localPreview) : '')
+      if (image) imageReference.current = image
+      const setup = { ...collectCustomizedData(), image }
+      const design = { background_color: boothBackgroundColor, background_image: await uploadBackground(boothBackgroundImage), button_color: boothButtonColor, step1_text: boothStep1Text, step2_text: boothStep2Text, step3_text: boothStep3Text }
+      const flyer = { title: flyerTitle, subtitle: flyerSubtitle, title_color: flyerTitleColor, title_size: flyerTitleSize, title_font: flyerTitleFont, title_position: flyerTitlePosition, subtitle_color: flyerSubtitleColor, subtitle_size: flyerSubtitleSize, subtitle_font: flyerSubtitleFont, subtitle_position: flyerSubtitlePosition, qr_code_position: flyerQrCodePosition, background: flyerBackground, background_image: flyerBackgroundImage ? await uploadBackground(flyerBackgroundImage) : null, background_blur: flyerBackgroundBlur }
+      const { error } = await supabase.rpc('save_event', { p_slug: slug.trim(), p_title: title.trim(), p_setup: setup, p_design: design, p_flyer: flyer, p_publish: publish })
+      if (error) throw error
+      setImage(localPreview || ''); setGrid(rows, cols)
+      if (publish) setIsModalOpen(true)
+      return true
+    } catch (error) { setSaveError(t(databaseErrorMessage(error as { code?: string; message?: string }))); return false }
+    finally { savingRef.current = false; setSaving(false) }
+  }
+  const handleNextStep = async () => { if (await saveEvent(false)) setStep(value => Math.min(2, value + 1)) }
+  const handleFinalSave = async () => { await saveEvent(true) }
 
   // Wizard steps rendering
   const steps = [
@@ -367,6 +303,7 @@ export default function CreateProject() {
                   <input
                     className="w-full border border-blue-200 bg-white rounded-lg px-10 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={slug}
+                    disabled={Boolean(initialSlug)}
                     onChange={(e) => setSlug(e.target.value)}
                     placeholder={t("identifiant-unique-sans-espaces")}
                   />
@@ -447,11 +384,11 @@ export default function CreateProject() {
                 <label className="block mb-3 font-medium text-purple-700"><T text={"Format d'étiquette"} /></label>
                 <div className="flex flex-wrap gap-4">
                   {LABEL_FORMATS.map(format => (
-                    <label 
-                      key={format.name} 
+                    <label
+                      key={format.name}
                       className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-all ${
-                        selectedFormat.name === format.name 
-                          ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg border border-purple-400' 
+                        selectedFormat.name === format.name
+                          ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-lg border border-purple-400'
                           : 'bg-white border border-purple-200 text-purple-800 hover:bg-purple-50'
                       }`}
                     >
@@ -487,7 +424,7 @@ export default function CreateProject() {
                     <div>
                       <label className="block text-sm text-gray-500"><T text={"Nombre de lignes"} /></label>
                       <div className="flex items-center mt-1">
-                        <button 
+                        <button
                           className="h-10 w-10 rounded-l-lg bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center justify-center"
                           onClick={() => rows > 1 && setRows(rows - 1)}
                         >
@@ -502,7 +439,7 @@ export default function CreateProject() {
                           min={1}
                           className="h-10 w-16 border-y border-purple-200 text-center focus:outline-none text-lg font-semibold text-purple-800"
                         />
-                        <button 
+                        <button
                           className="h-10 w-10 rounded-r-lg bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center justify-center"
                           onClick={() => setRows(Math.min(50, rows + 1))}
                         >
@@ -529,7 +466,7 @@ export default function CreateProject() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Stats cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                 <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-3 rounded-lg">
@@ -561,9 +498,9 @@ export default function CreateProject() {
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"><T text={"Grille"} />{rows}×{cols}</span>
                 </div>
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-3 rounded-lg shadow-inner">
-                  <canvas ref={canvasRef} style={{ 
-                    maxWidth: '100%', 
-                    border: '1px solid #ccc', 
+                  <canvas ref={canvasRef} style={{
+                    maxWidth: '100%',
+                    border: '1px solid #ccc',
                     borderRadius: 8,
                     boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                   }} />
@@ -574,9 +511,9 @@ export default function CreateProject() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                   </svg><T text={"Plan de collage"} /></h4>
-                <GridReference 
-                  rows={rows} 
-                  cols={cols} 
+                <GridReference
+                  rows={rows}
+                  cols={cols}
                   formatWidthMM={selectedFormat.widthMM}
                   formatHeightMM={selectedFormat.heightMM}
                   image={localPreview}
@@ -591,10 +528,10 @@ export default function CreateProject() {
       label: "Design",
       content: (
         <div className="bg-white rounded-xl shadow-md p-8">
-          <PhotoBoothCustomizer 
-            initialSlug={slug} 
-            forceSlug={slug} 
-            hideProjectSelect 
+          <PhotoBoothCustomizer
+            initialSlug={slug}
+            forceSlug={slug}
+            hideProjectSelect
             onDataChange={handleBoothDataUpdate}
           />
         </div>
@@ -604,10 +541,11 @@ export default function CreateProject() {
       label: "Flyer",
       content: (
         <div className="bg-white rounded-xl shadow-md p-8">
-          <FlyerGenerator 
-            initialSlug={slug} 
-            forceSlug={slug} 
-            hideProjectSelect 
+          <FlyerGenerator
+            initialData={{ title: flyerTitle, subtitle: flyerSubtitle, titleColor: flyerTitleColor, titleSize: flyerTitleSize, titleFont: flyerTitleFont, titlePosition: flyerTitlePosition, subtitleColor: flyerSubtitleColor, subtitleSize: flyerSubtitleSize, subtitleFont: flyerSubtitleFont, subtitlePosition: flyerSubtitlePosition, qrCodePosition: flyerQrCodePosition, background: flyerBackground, uploadedBackground: flyerBackgroundImage, backgroundBlur: flyerBackgroundBlur }}
+            initialSlug={slug}
+            forceSlug={slug}
+            hideProjectSelect
             onDataChange={handleFlyerDataUpdate}
           />
         </div>
@@ -648,21 +586,23 @@ export default function CreateProject() {
         {steps[step].content}
       </div>
 
+      {saveError && <p role="alert" className="wall-error">{saveError}</p>}
+      <button className="btn-secondary" disabled={saving} onClick={() => void saveEvent(false)}>{saving ? t('Enregistrement...') : t('Enregistrer le brouillon')}</button>
       {/* Wizard navigation */}
       <div className="flex justify-between mt-6">
         <button
           onClick={() => setStep(s => Math.max(0, s - 1))}
-          disabled={step === 0}
+          disabled={step === 0 || saving}
           className={`px-6 py-2 rounded font-semibold shadow transition ${step === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-br from-gray-200 to-gray-400 text-gray-700 hover:from-gray-300 hover:to-gray-500'}`}
         ><T text={"← Précédent"} /></button>
         {step < steps.length - 1 ? (
           <button
             onClick={handleNextStep}
             disabled={
-              (step === 0 && (!slug || !title || !localPreview || !eventDate))
+              (saving || (step === 0 && (!slug || !title || !localPreview || !eventDate)))
             }
             className={`px-6 py-2 rounded font-semibold shadow transition ${
-              (step === 0 && (!slug || !title || !localPreview || !eventDate))
+              (saving || (step === 0 && (!slug || !title || !localPreview || !eventDate)))
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
             }`}
@@ -670,7 +610,7 @@ export default function CreateProject() {
         ) : (
           <button
             onClick={handleFinalSave}
-            disabled={!slug || !title || !localPreview || !eventDate}
+            disabled={saving || !slug || !title || !localPreview || !eventDate}
             className={`px-6 py-2 rounded font-semibold shadow transition ${
               (!slug || !title || !localPreview || !eventDate)
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -698,15 +638,15 @@ export default function CreateProject() {
 }
 
 // Ajoutez ce composant à la fin du fichier (en dehors de CreateProject)
-function GridReference({ 
-  rows, 
-  cols, 
-  formatWidthMM, 
-  formatHeightMM, 
-  image 
-}: { 
-  rows: number; 
-  cols: number; 
+function GridReference({
+  rows,
+  cols,
+  formatWidthMM,
+  formatHeightMM,
+  image
+}: {
+  rows: number;
+  cols: number;
   formatWidthMM: number;
   formatHeightMM: number;
   image: string | null;
@@ -722,31 +662,31 @@ function GridReference({
   // Generate printable collage plan
   const generatePrintablePlan = useCallback(() => {
     if (!canvasRef.current || !image) return;
-    
+
     setIsGenerating(true);
     setGeneratedPreview(null);
-    
+
     // Create a high-resolution canvas for printing
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     // Scale: 1mm = 10px for better detail on screen and print
     // This creates a high-resolution image that properly scales when printed
     const SCALE_FACTOR = Math.min(10, 4096 / Math.max(formatWidthMM * cols, formatHeightMM * rows));
-    
+
     // Set canvas size based on real dimensions (10px = 1mm for better resolution)
     canvas.width = formatWidthMM * cols * SCALE_FACTOR;
     canvas.height = formatHeightMM * rows * SCALE_FACTOR;
-    
+
     // Draw background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw grid lines
     ctx.strokeStyle = '#333333';
     ctx.lineWidth = 2;
-    
+
     // Draw horizontal grid lines
     for (let r = 0; r <= rows; r++) {
       const y = r * formatHeightMM * SCALE_FACTOR;
@@ -755,7 +695,7 @@ function GridReference({
       ctx.lineTo(canvas.width, y);
       ctx.stroke();
     }
-    
+
     // Draw vertical grid lines
     for (let c = 0; c <= cols; c++) {
       const x = c * formatWidthMM * SCALE_FACTOR;
@@ -764,20 +704,20 @@ function GridReference({
       ctx.lineTo(x, canvas.height);
       ctx.stroke();
     }
-    
+
     // Add labels to cells
     ctx.fillStyle = '#000000';
     const fontSize = Math.min(formatWidthMM, formatHeightMM) * SCALE_FACTOR * 0.2;
     ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const ref = `${String.fromCharCode(65 + r)}${c + 1}`;
         const x = c * formatWidthMM * SCALE_FACTOR + (formatWidthMM * SCALE_FACTOR / 2);
         const y = r * formatHeightMM * SCALE_FACTOR + (formatHeightMM * SCALE_FACTOR / 2);
-        
+
         ctx.fillText(ref, x, y);
       }
     }
@@ -789,28 +729,28 @@ function GridReference({
       // Create a scaled-down preview
       const MAX_PREVIEW_WIDTH = 300;
       const scale = Math.min(1, MAX_PREVIEW_WIDTH / canvas.width);
-      
+
       previewCanvas.width = canvas.width * scale;
       previewCanvas.height = canvas.height * scale;
-      
+
       previewCtx.drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
       setGeneratedPreview(previewCanvas.toDataURL('image/jpeg'));
     }
-    
+
     setIsGenerating(false);
   }, [rows, cols, formatWidthMM, formatHeightMM, image]);
-  
+
   // Download the generated plan
   const downloadPrintablePlan = useCallback(() => {
     if (!canvasRef.current) return;
-    
+
     // First ensure the canvas has content
     if (!generatedPreview) {
       generatePrintablePlan();
       // Need to wait for generation to complete, so exit for now
       return;
     }
-    
+
     // Then create download link
     const link = document.createElement('a');
     link.download = `grille-${rows}x${cols}-${formatWidthMM}x${formatHeightMM}mm.png`;
@@ -884,7 +824,7 @@ function GridReference({
           </div>
         </div>
       </div>
-      
+
       {/* Preview of generated plan (if available) */}
       {generatedPreview && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -894,18 +834,18 @@ function GridReference({
           </div>
           <div className="p-4">
             <div className="rounded-lg overflow-hidden border border-gray-200">
-              <Image 
-                src={generatedPreview} 
-                alt="Aperçu du plan de collage" 
+              <Image
+                src={generatedPreview}
+                alt="Aperçu du plan de collage"
                 width={400}
                 height={300}
-                style={{ maxWidth: '100%', height: 'auto', display: 'block' }} 
+                style={{ maxWidth: '100%', height: 'auto', display: 'block' }}
               />
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Dimension info */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-md border border-indigo-100 overflow-hidden">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3">
@@ -964,7 +904,7 @@ function GridReference({
           </div>
         </div>
       </div>
-      
+
       {/* Buttons for plan management */}
       <div className="flex flex-col gap-4">
         <button
@@ -988,7 +928,7 @@ function GridReference({
               </svg><T text={"Télécharger plan de collage à l'échelle réelle"} /></>
           )}
         </button>
-        
+
         <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200 shadow-md">
           <div className="flex items-start mb-3">
             <div className="bg-amber-100 rounded-full p-1 mr-3">
@@ -1009,13 +949,13 @@ function GridReference({
           </ul>
         </div>
       </div>
-      
+
       {/* Hidden canvas for generating the printable plan */}
-      <canvas 
-        ref={canvasRef} 
+      <canvas
+        ref={canvasRef}
         className="hidden"
       />
-      
+
       {/* Custom scrollbar styles */}
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

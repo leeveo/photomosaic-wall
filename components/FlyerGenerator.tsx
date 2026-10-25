@@ -5,6 +5,8 @@ import { T, useLanguage } from '@/components/LanguageProvider'
 import { useEffect, useState, useRef } from 'react'
 import { toPng } from 'html-to-image'
 import { supabase } from '@/lib/supabase'
+import { invitationPath } from '@/lib/guest'
+import { resolveMedia } from '@/lib/media'
 import { useQRCode } from 'next-qrcode'
 import Image from 'next/image'
 
@@ -59,52 +61,58 @@ const POSITION_OPTIONS = [
 ]
 
 interface FlyerGeneratorProps {
+  initialData?: Partial<FlyerData>;
   initialSlug?: string;
   forceSlug?: string;
   hideProjectSelect?: boolean;
   onDataChange?: (data: FlyerData) => void;
 }
 
-export default function FlyerGenerator({ 
-  initialSlug = '', 
-  forceSlug, 
+export default function FlyerGenerator({
+  initialData,
+  initialSlug = '',
+  forceSlug,
   hideProjectSelect = false,
-  onDataChange 
+  onDataChange
 }: FlyerGeneratorProps) {
   const { t } = useLanguage()
   const { Canvas } = useQRCode()
   const [projects, setProjects] = useState<Project[]>([])
   const [chosenSlug, setSelectedSlug] = useState<string>(initialSlug || '')
   const selectedSlug = forceSlug || chosenSlug
-  const [title, setTitle] = useState('Participez à notre mosaïque photo !')
-  const [subtitle, setSubtitle] = useState('Scannez le QR code ci-dessous pour accéder au photobooth')
-  
+  const [invitation, setInvitation] = useState<{ slug: string; token: string } | null>(null)
+  const [backgroundPreview, setBackgroundPreview] = useState('')
+  const [title, setTitle] = useState(initialData?.title ?? 'Participez à notre mosaïque photo !')
+  const [subtitle, setSubtitle] = useState(initialData?.subtitle ?? 'Scannez le QR code ci-dessous pour accéder au photobooth')
+
   // Text styling states with enhanced positioning
-  const [titleColor, setTitleColor] = useState('#ffffff')
-  const [titleSize, setTitleSize] = useState('24')
-  const [titleFont, setTitleFont] = useState('Arial, Helvetica, sans-serif')
-  const [titlePosition, setTitlePosition] = useState('top-center') // 9-point grid position
-  
-  const [subtitleColor, setSubtitleColor] = useState('#ffffff')
-  const [subtitleSize, setSubtitleSize] = useState('16')
-  const [subtitleFont, setSubtitleFont] = useState('Arial, Helvetica, sans-serif')
-  const [subtitlePosition, setSubtitlePosition] = useState('bottom-center') // 9-point grid position
-  
+  const [titleColor, setTitleColor] = useState(initialData?.titleColor ?? '#ffffff')
+  const [titleSize, setTitleSize] = useState(initialData?.titleSize ?? '24')
+  const [titleFont, setTitleFont] = useState(initialData?.titleFont ?? 'Arial, Helvetica, sans-serif')
+  const [titlePosition, setTitlePosition] = useState(initialData?.titlePosition ?? 'top-center') // 9-point grid position
+
+  const [subtitleColor, setSubtitleColor] = useState(initialData?.subtitleColor ?? '#ffffff')
+  const [subtitleSize, setSubtitleSize] = useState(initialData?.subtitleSize ?? '16')
+  const [subtitleFont, setSubtitleFont] = useState(initialData?.subtitleFont ?? 'Arial, Helvetica, sans-serif')
+  const [subtitlePosition, setSubtitlePosition] = useState(initialData?.subtitlePosition ?? 'bottom-center') // 9-point grid position
+
   // QR code styling
   const [qrCodeColor, setQrCodeColor] = useState('#000000')
   const [qrCodeBgColor, setQrCodeBgColor] = useState('#ffffff')
-  const [qrCodePosition, setQrCodePosition] = useState('middle-center') // 9-point grid position
+  const [qrCodePosition, setQrCodePosition] = useState(initialData?.qrCodePosition ?? 'middle-center') // 9-point grid position
   const [adaptQrToBackground, setAdaptQrToBackground] = useState(false)
-  
-  const [background, setBackground] = useState<string>('#4f46e5')
-  const [uploadedBackground, setUploadedBackground] = useState<string | null>(null)
-  const [backgroundBlur, setBackgroundBlur] = useState<number>(0) // 0-10 blur level
+
+  const [background, setBackground] = useState<string>(initialData?.background ?? '#4f46e5')
+  const [uploadedBackground, setUploadedBackground] = useState<string | null>(initialData?.uploadedBackground ?? null)
+  const [backgroundBlur, setBackgroundBlur] = useState<number>(initialData?.backgroundBlur ?? 0) // 0-10 blur level
   const [isGenerating, setIsGenerating] = useState(false)
-  
+
+  useEffect(() => { if (!selectedSlug) return; let cancelled = false; supabase.from('projects').select('guest_token').eq('slug', selectedSlug).single().then(({ data }) => { if (!cancelled && data) setInvitation({ slug: selectedSlug, token: data.guest_token }) }); return () => { cancelled = true } }, [selectedSlug])
+  useEffect(() => { let cancelled = false; resolveMedia(uploadedBackground).then(url => { if (!cancelled) setBackgroundPreview(url) }).catch(() => {}); return () => { cancelled = true } }, [uploadedBackground])
   const flyerRef = useRef<HTMLDivElement>(null)
   // Hidden flyer element used only for downloading at correct scale
   const downloadFlyerRef = useRef<HTMLDivElement>(null)
-  
+
   useEffect(() => {
     // Only fetch projects if we're not forcing a specific slug
     if (!hideProjectSelect) {
@@ -149,18 +157,18 @@ export default function FlyerGenerator({
   const handleDownload = async () => {
     if (!downloadFlyerRef.current) return;
     setIsGenerating(true);
-    
+
     try {
       // A5 dimensions in pixels at 300 DPI:
       // 14.8 cm × 21 cm = 148 mm × 210 mm
       // At 300 DPI (11.811 pixels per mm): 1748 × 2480 pixels
-      const dataUrl = await toPng(downloadFlyerRef.current, { 
+      const dataUrl = await toPng(downloadFlyerRef.current, {
         width: 1748, // 148 mm × 11.811 pixels/mm
         height: 2480, // 210 mm × 11.811 pixels/mm
         pixelRatio: 1,
         quality: 0.95
       });
-      
+
       const link = document.createElement('a');
       link.href = dataUrl;
       link.download = `flyer-${selectedSlug || 'mosaique'}-A5.png`;
@@ -185,7 +193,7 @@ export default function FlyerGenerator({
     reader.readAsDataURL(file);
   }
 
-  const boothUrl = typeof window !== 'undefined' && selectedSlug ? `${window.location.origin}/photo?id=${selectedSlug}` : '';
+  const boothUrl = typeof window !== 'undefined' && invitation?.slug === selectedSlug ? `${window.location.origin}${invitationPath('photo', selectedSlug, invitation.token)}` : '';
 
   // Function to adapt QR code colors based on background
   const getAdaptiveQrColors = () => {
@@ -199,13 +207,13 @@ export default function FlyerGenerator({
 
     // For dark backgrounds use light QR code, for light backgrounds use dark QR code
     // This is a simple implementation - more sophisticated color analysis could be used
-    const isDarkBackground = background.toLowerCase() === '#000000' || 
-                            background.toLowerCase() === 'black' || 
+    const isDarkBackground = background.toLowerCase() === '#000000' ||
+                            background.toLowerCase() === 'black' ||
                             background.startsWith('#0') ||
                             background.startsWith('#1') ||
                             background.startsWith('#2') ||
                             background.startsWith('#3');
-    
+
     if (isDarkBackground || uploadedBackground) {
       // For dark or image backgrounds, use white QR with black dots
       return {
@@ -231,7 +239,7 @@ export default function FlyerGenerator({
         return 'mt-4 mb-auto self-center';
       case 'top-right':
         return 'mt-4 mb-auto self-end';
-      
+
       // Middle row
       case 'middle-left':
         return 'mt-auto mb-auto self-start';
@@ -239,7 +247,7 @@ export default function FlyerGenerator({
         return 'mt-auto mb-auto self-center';
       case 'middle-right':
         return 'mt-auto mb-auto self-end';
-      
+
       // Bottom row
       case 'bottom-left':
         return 'mt-auto mb-4 self-start';
@@ -247,12 +255,12 @@ export default function FlyerGenerator({
         return 'mt-auto mb-4 self-center';
       case 'bottom-right':
         return 'mt-auto mb-4 self-end';
-      
+
       default:
         return 'mt-auto mb-auto self-center';
     }
   };
-  
+
   return (
     <div className="space-y-8 max-w-6xl">
       {!hideProjectSelect && (
@@ -272,7 +280,7 @@ export default function FlyerGenerator({
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg><T text={"Sélection du projet"} /></h3>
-              
+
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-500">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -295,14 +303,14 @@ export default function FlyerGenerator({
               </div>
             </div>
           )}
-          
+
           {/* Content section with position controls */}
           <div className="bg-gradient-to-br from-cyan-50 to-blue-50 p-6 rounded-xl shadow-md border border-blue-100">
             <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg><T text={"Textes du flyer"} /></h3>
-            
+
             <div className="space-y-6">
               {/* Title section with styling and position */}
               <div className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
@@ -322,7 +330,7 @@ export default function FlyerGenerator({
                       placeholder={t("Titre du flyer")}
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-3">
                     {/* Color picker */}
                     <div>
@@ -342,7 +350,7 @@ export default function FlyerGenerator({
                         />
                       </div>
                     </div>
-                    
+
                     {/* Font size */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1"><T text={"Taille (px)"} /></label>
@@ -355,7 +363,7 @@ export default function FlyerGenerator({
                         className="w-full text-sm border border-gray-200 rounded px-2 py-1"
                       />
                     </div>
-                    
+
                     {/* Font family */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1"><T text={"Police"} /></label>
@@ -372,7 +380,7 @@ export default function FlyerGenerator({
                       </select>
                     </div>
                   </div>
-                  
+
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
                     <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
@@ -394,7 +402,7 @@ export default function FlyerGenerator({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="mt-2 bg-gray-100 p-2 rounded-lg">
                     <p className="text-xs text-gray-500 mb-1"><T text={"Aperçu:"} /></p>
@@ -408,7 +416,7 @@ export default function FlyerGenerator({
                   </div>
                 </div>
               </div>
-              
+
               {/* Subtitle section with styling and enhanced position */}
               <div className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
                 <h4 className="text-sm font-medium text-blue-700 mb-3"><T text={"Sous-titre"} /></h4>
@@ -427,7 +435,7 @@ export default function FlyerGenerator({
                       placeholder={t("Instructions pour le QR code")}
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-3">
                     {/* Color picker */}
                     <div>
@@ -447,7 +455,7 @@ export default function FlyerGenerator({
                         />
                       </div>
                     </div>
-                    
+
                     {/* Font size */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1"><T text={"Taille (px)"} /></label>
@@ -460,7 +468,7 @@ export default function FlyerGenerator({
                         className="w-full text-sm border border-gray-200 rounded px-2 py-1"
                       />
                     </div>
-                    
+
                     {/* Font family */}
                     <div>
                       <label className="block text-xs text-gray-500 mb-1"><T text={"Police"} /></label>
@@ -477,7 +485,7 @@ export default function FlyerGenerator({
                       </select>
                     </div>
                   </div>
-                  
+
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
                     <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
@@ -499,7 +507,7 @@ export default function FlyerGenerator({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="mt-2 bg-gray-100 p-2 rounded-lg">
                     <p className="text-xs text-gray-500 mb-1"><T text={"Aperçu:"} /></p>
@@ -513,7 +521,7 @@ export default function FlyerGenerator({
                   </div>
                 </div>
               </div>
-              
+
               {/* QR Code styling section with enhanced position */}
               <div className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
                 <h4 className="text-sm font-medium text-blue-700 mb-3">QR Code</h4>
@@ -528,7 +536,7 @@ export default function FlyerGenerator({
                     />
                     <label htmlFor="adaptQrToBackground" className="ml-2 text-sm text-gray-700"><T text={"Adapter automatiquement les couleurs du QR code au fond"} /></label>
                   </div>
-                  
+
                   {!adaptQrToBackground && (
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -548,7 +556,7 @@ export default function FlyerGenerator({
                           />
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="block text-xs text-gray-500 mb-1"><T text={"Couleur du fond"} /></label>
                         <div className="flex items-center space-x-2">
@@ -568,7 +576,7 @@ export default function FlyerGenerator({
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
                     <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
@@ -590,7 +598,7 @@ export default function FlyerGenerator({
                       ))}
                     </div>
                   </div>
-                  
+
                   {/* Preview */}
                   <div className="mt-2 bg-gray-100 p-4 rounded-lg flex justify-center">
                     <div className="bg-white rounded-lg">
@@ -614,14 +622,14 @@ export default function FlyerGenerator({
               </div>
             </div>
           </div>
-          
+
           {/* Design section */}
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl shadow-md border border-purple-100">
             <h3 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
               </svg><T text={"Design du flyer"} /></h3>
-            
+
             <div className="space-y-5">
               <div>
                 <label className="block mb-2 font-medium text-purple-700"><T text={"Couleur arrière-plan"} /></label>
@@ -649,7 +657,7 @@ export default function FlyerGenerator({
                 </div>
                 <p className="mt-1 text-xs text-purple-600"><T text={"Vous pouvez entrer un code hexadécimal ou un nom de couleur CSS"} /></p>
               </div>
-              
+
               <div>
                 <label className="block mb-2 font-medium text-purple-700"><T text={"Image arrière-plan"} /></label>
                 <div className="bg-white p-4 rounded-lg border border-purple-100 mb-3">
@@ -668,13 +676,13 @@ export default function FlyerGenerator({
                         className="hidden"
                       />
                     </label>
-                    
+
                     {uploadedBackground && (
                       <div className="relative group h-14 w-14 rounded-lg shadow-sm overflow-hidden border border-purple-200">
                         {uploadedBackground && (
-                          <Image 
-                            src={uploadedBackground} 
-                            alt="Aperçu arrière-plan" 
+                          <Image
+                            src={backgroundPreview || '/backgrounds/beach.jpg'}
+                            alt="Aperçu arrière-plan"
                             className="h-full w-full object-cover"
                             width={56}
                             height={56}
@@ -689,7 +697,7 @@ export default function FlyerGenerator({
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <p><span className="font-medium"><T text={"Recommandations :"} /></span></p>
                     <ul className="mt-1 ml-4 list-disc text-xs space-y-1 text-gray-600">
@@ -700,15 +708,15 @@ export default function FlyerGenerator({
                     </ul>
                   </div>
                 </div>
-                
+
                 {uploadedBackground && (
                   <div className="bg-white p-4 rounded-lg border border-purple-100">
                     <label className="block text-sm text-gray-700 mb-1"><T text={"Effet de flou"} /></label>
                     <div className="flex items-center gap-4">
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="10" 
+                      <input
+                        type="range"
+                        min="0"
+                        max="10"
                         value={backgroundBlur}
                         onChange={(e) => setBackgroundBlur(parseInt(e.target.value))}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
@@ -721,7 +729,7 @@ export default function FlyerGenerator({
               </div>
             </div>
           </div>
-          
+
           {/* Download section */}
           <button
             onClick={handleDownload}
@@ -746,7 +754,7 @@ export default function FlyerGenerator({
             )}
           </button>
         </div>
-        
+
         {/* Right side - Preview */}
         <div className="md:col-span-2 space-y-6">
           <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
@@ -757,12 +765,12 @@ export default function FlyerGenerator({
                 </svg><T text={"Aperçu du flyer (Format A5)"} /></h3>
             </div>
             <div className="p-6 flex justify-center bg-gray-100">
-              <div 
+              <div
                 ref={flyerRef}
                 className="w-[210px] h-[297px] border-8 border-white shadow-xl rounded-xl overflow-hidden relative"
                 style={{
                   background: uploadedBackground
-                    ? `url(${uploadedBackground}) center/cover no-repeat`
+                    ? `url(${JSON.stringify(backgroundPreview)}) center/cover no-repeat`
                     : background.startsWith('http')
                       ? `url(${background}) center/cover no-repeat`
                       : background,
@@ -771,16 +779,16 @@ export default function FlyerGenerator({
               >
                 {/* Apply the background blur effect if an image is used */}
                 {uploadedBackground && backgroundBlur > 0 && (
-                  <div 
-                    className="absolute inset-0" 
-                    style={{ 
+                  <div
+                    className="absolute inset-0"
+                    style={{
                       backdropFilter: `blur(${backgroundBlur}px)`,
                       WebkitBackdropFilter: `blur(${backgroundBlur}px)`,
                       background: 'transparent'
                     }}
                   ></div>
                 )}
-                
+
                 <div className="absolute inset-0 bg-black/30" />
                 <div className="relative z-10 flex flex-col items-stretch h-full text-white p-4">
                   {/* Title with position - using 9-point grid */}
@@ -796,12 +804,12 @@ export default function FlyerGenerator({
                       {title}
                     </h1>
                   </div>
-                  
+
                   {/* QR code with position - using 9-point grid */}
                   <div className={`flex flex-col items-center ${getPositionClasses(qrCodePosition)}`}>
                     {/* QR code with adaptive colors */}
-                    <div className="rounded-lg shadow-md" style={{ 
-                      display: 'inline-flex', 
+                    <div className="rounded-lg shadow-md" style={{
+                      display: 'inline-flex',
                       justifyContent: 'center',
                       alignItems: 'center',
                       backgroundColor: adaptQrToBackground ? 'transparent' : qrCodeBgColor
@@ -822,7 +830,7 @@ export default function FlyerGenerator({
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Subtitle with position - using 9-point grid */}
                   <div className={`${getPositionClasses(subtitlePosition)} text-center`}>
                     <p style={{
@@ -840,7 +848,7 @@ export default function FlyerGenerator({
               </div>
             </div>
           </div>
-          
+
           {/* Usage guide */}
           <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200 shadow-md">
             <div className="flex items-start mb-3">
@@ -866,16 +874,16 @@ export default function FlyerGenerator({
       </div>
 
       {/* Invisible flyer element used only for download - positioned off-screen */}
-      <div 
+      <div
         className="fixed left-[-9999px] top-[-9999px]"
         aria-hidden="true"
       >
-        <div 
+        <div
           ref={downloadFlyerRef}
-          className="w-[1748px] h-[2480px] overflow-hidden relative" 
+          className="w-[1748px] h-[2480px] overflow-hidden relative"
           style={{
             background: uploadedBackground
-              ? `url(${uploadedBackground}) center/cover no-repeat`
+              ? `url(${JSON.stringify(backgroundPreview)}) center/cover no-repeat`
               : background.startsWith('http')
                 ? `url(${background}) center/cover no-repeat`
                 : background,
@@ -883,18 +891,18 @@ export default function FlyerGenerator({
         >
           {/* Apply the background blur effect if an image is used */}
           {uploadedBackground && backgroundBlur > 0 && (
-            <div 
-              className="absolute inset-0" 
-              style={{ 
+            <div
+              className="absolute inset-0"
+              style={{
                 backdropFilter: `blur(${backgroundBlur}px)`,
                 WebkitBackdropFilter: `blur(${backgroundBlur}px)`,
                 background: 'transparent'
               }}
             ></div>
           )}
-          
+
           <div className="absolute inset-0 bg-black/30" />
-          
+
           {/* Match the exact structure of the preview layout but scaled up */}
           <div className="relative z-10 flex flex-col items-stretch h-full text-white p-[200px]">
             {/* Title with position - using 9-point grid */}
@@ -911,12 +919,12 @@ export default function FlyerGenerator({
                 {title}
               </h1>
             </div>
-            
+
             {/* QR code with position - using 9-point grid - LARGER SIZE */}
             <div className={`flex flex-col items-center ${getPositionClasses(qrCodePosition)}`}>
               {/* QR code with adaptive colors */}
-              <div className="rounded-[40px] shadow-xl" style={{ 
-                display: 'inline-flex', 
+              <div className="rounded-[40px] shadow-xl" style={{
+                display: 'inline-flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 backgroundColor: adaptQrToBackground ? 'transparent' : qrCodeBgColor,
@@ -938,7 +946,7 @@ export default function FlyerGenerator({
                 )}
               </div>
             </div>
-            
+
             {/* Subtitle with position - using 9-point grid */}
             <div className={`${getPositionClasses(subtitlePosition)} text-center`}>
               <p style={{
@@ -946,7 +954,7 @@ export default function FlyerGenerator({
                 fontSize: `${Math.max(parseInt(subtitleSize) * 5, 80)}px`,
                 fontFamily: subtitleFont,
                 textAlign: 'center',
-                maxWidth: '100%', 
+                maxWidth: '100%',
                 margin: '0 auto',
                 textShadow: '4px 4px 10px rgba(0,0,0,0.6)',
                 lineHeight: 1.3,

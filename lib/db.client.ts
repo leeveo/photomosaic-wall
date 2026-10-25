@@ -1,6 +1,7 @@
 'use client'
 
 import { supabase } from './supabase'
+import { resolveMedia, mediaLocation } from './media'
 
 /* 🔹 Créer un projet */
 export async function saveProject(slug: string, title: string) {
@@ -30,61 +31,31 @@ export async function saveSetup(slug: string, image: string, rows: number, cols:
   return { success: true }
 }
 
-/* 🔹 Uploader une image dans Supabase Storage */
-export async function uploadImage(base64: string, slug: string): Promise<string> {
-  const fileName = `${slug}-${Date.now()}.jpg`
-  const response = await fetch(base64)
-  if (!response.ok) throw new Error('Image illisible')
-  const fileBuffer = await response.blob()
-
-  const { error: uploadError } = await supabase.storage
-    .from('tiles')
-    .upload(fileName, fileBuffer, {
-      contentType: 'image/jpeg',
-      upsert: false,
-    })
-
-  if (uploadError) {
-    console.error('Erreur uploadImage:', uploadError)
-    throw uploadError
-  }
-
-  const { data: publicUrl } = supabase.storage.from('tiles').getPublicUrl(fileName)
-  return publicUrl.publicUrl
-}
-
-/* 🔹 Enregistrer une tuile */
-export async function saveTile(
-  slug: string,
-  row: number,
-  col: number,
-  imageUrl: string
-) {
-  const { error } = await supabase
-    .from('tiles')
-    .insert([{ project_slug: slug, row, col, image_url: imageUrl }])
-
-  if (error) {
-    console.error('Erreur saveTile:', error)
-    throw error
-  }
-
-  return { success: true }
-}
-
 /* 🔹 Charger toutes les tuiles pour un projet */
 export async function loadTiles(slug: string) {
-  const { data, error } = await supabase
-    .from('tiles')
-    .select('*')
-    .eq('project_slug', slug)
-
-  if (error) {
-    console.error('Erreur loadTiles:', error)
-    throw error
+  const all = []
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from('tiles').select('*').eq('project_slug', slug).eq('moderation_status', 'approved').order('created_at').order('id').range(offset, offset + 499)
+    if (error) throw error
+    all.push(...await Promise.all((data || []).map(async tile => ({ ...tile, image_url: await resolveMedia(tile.image_url) }))))
+    if (!data || data.length < 500) break
   }
+  return all
+}
 
-  return data || []
+export type TileReservation = { id: string; row: number; col: number; path: string }
+export async function reserveTile(slug: string): Promise<TileReservation> {
+  const { data, error } = await supabase.rpc('reserve_tile', { p_slug: slug })
+  if (error) throw error
+  return data
+}
+export async function submitReservedTile(reservation: TileReservation, image: string) {
+  const file = await (await fetch(image)).blob()
+  const uploaded = await supabase.storage.from('tiles').upload(reservation.path, file, { contentType: 'image/jpeg', upsert: false })
+  if (uploaded.error && uploaded.error.message !== 'The resource already exists') throw uploaded.error
+  const { data, error } = await supabase.rpc('commit_tile', { p_reservation: reservation.id })
+  if (error) throw error
+  return { ...data, image_url: await resolveMedia(data.image_url).catch(() => '') }
 }
 
 /* 🔹 Supprimer toutes les tuiles d’un projet */
@@ -140,8 +111,9 @@ export async function updateProject(
 /* 🔹 Supprimer une image du storage Supabase */
 export async function deleteImage(imageUrl: string) {
   try {
-    const urlParts = imageUrl.split('/')
-    const fileName = urlParts[urlParts.length - 1]
+    const location = mediaLocation(imageUrl)
+    if (!location) throw new Error('Storage path unavailable')
+    const fileName = location.path
 
     const { error } = await supabase.storage
       .from('tiles')

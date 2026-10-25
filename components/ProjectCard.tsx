@@ -41,7 +41,6 @@ export default function ProjectCard({
   const { Canvas } = useQRCode()
 
   const [origin, setOrigin] = useState(process.env.NEXT_PUBLIC_SITE_URL || '')
-  useEffect(() => { setOrigin(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin) }, [])
   const boothUrl = `${origin}/photo?id=${encodeURIComponent(slug)}`
 
   useEffect(() => {
@@ -148,7 +147,7 @@ export default function ProjectCard({
             </button>
           </Link>
           <button
-            onClick={() => setShowQR(true)}
+            onClick={() => { setOrigin(process.env.NEXT_PUBLIC_SITE_URL || window.location.origin); setShowQR(true) }}
             className="bg-gray-100 border border-gray-300 hover:bg-gray-200 text-gray-800 px-4 py-2 text-sm rounded-md transition"
           >
             🔗 QR Code

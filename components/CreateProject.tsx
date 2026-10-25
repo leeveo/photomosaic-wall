@@ -20,7 +20,6 @@ export default function CreateProject() {
   const [slug, setSlug] = useState('')
   const [title, setTitle] = useState('')
   const [rows, setRows] = useState(5)
-  const [cols, setCols] = useState(8)
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState(LABEL_FORMATS[0])
@@ -56,13 +55,9 @@ export default function CreateProject() {
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  useEffect(() => {
-    if (!imageSize || !selectedFormat) return
-    const imageRatio = imageSize.width / imageSize.height
-    const labelRatio = selectedFormat.widthMM / selectedFormat.heightMM
-    const calculatedCols = Math.max(1, Math.min(500, Math.round(rows * imageRatio / labelRatio)))
-    setCols(calculatedCols)
-  }, [rows, selectedFormat, imageSize])
+  const cols = imageSize && selectedFormat
+    ? Math.max(1, Math.min(500, Math.round(rows * (imageSize.width / imageSize.height) / (selectedFormat.widthMM / selectedFormat.heightMM))))
+    : 8
 
   // Wrap drawGridPreview in useCallback to prevent dependency issues
   const drawGridPreview = useCallback(() => {
@@ -631,7 +626,7 @@ export default function CreateProject() {
   ]
 
   // Wizard header
-  function StepHeader() {
+  function renderStepHeader() {
     return (
       <div className="flex items-center justify-center gap-4 mb-8">
         {steps.map((s, idx) => (
@@ -656,7 +651,7 @@ export default function CreateProject() {
       </div>
 
       {/* Wizard steps header */}
-      <StepHeader />
+      {renderStepHeader()}
 
       {/* Wizard step content */}
       <div>
@@ -843,9 +838,9 @@ function GridReference({
 
   // Generate the preview on component mount or when parameters change
   useEffect(() => {
-    if (image) {
-      generatePrintablePlan();
-    }
+    if (!image) return;
+    const frame = requestAnimationFrame(generatePrintablePlan);
+    return () => cancelAnimationFrame(frame);
   }, [generatePrintablePlan, image]);
 
   return (

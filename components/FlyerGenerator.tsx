@@ -71,7 +71,8 @@ export default function FlyerGenerator({
 }: FlyerGeneratorProps) {
   const { Canvas } = useQRCode()
   const [projects, setProjects] = useState<Project[]>([])
-  const [selectedSlug, setSelectedSlug] = useState<string>(initialSlug || '')
+  const [chosenSlug, setSelectedSlug] = useState<string>(initialSlug || '')
+  const selectedSlug = forceSlug || chosenSlug
   const [title, setTitle] = useState('Participez à notre mosaïque photo !')
   const [subtitle, setSubtitle] = useState('Scannez le QR code ci-dessous pour accéder au photobooth')
   
@@ -102,20 +103,13 @@ export default function FlyerGenerator({
   const downloadFlyerRef = useRef<HTMLDivElement>(null)
   
   useEffect(() => {
-    // If forceSlug is provided, use it and don't allow changing
-    if (forceSlug) {
-      setSelectedSlug(forceSlug);
-    } else if (initialSlug) {
-      setSelectedSlug(initialSlug);
-    }
-    
     // Only fetch projects if we're not forcing a specific slug
     if (!hideProjectSelect) {
       supabase.from('projects').select('slug, title').then(({ data }) => {
         if (data) setProjects(data);
       });
     }
-  }, [forceSlug, initialSlug, hideProjectSelect])
+  }, [hideProjectSelect])
 
   // Call onDataChange whenever relevant state changes
   useEffect(() => {

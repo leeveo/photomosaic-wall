@@ -28,7 +28,6 @@ function SetupPageContent() {
 
   const [saving, setSaving] = useState(false)
   const [rows, setRows] = useState(5)
-  const [cols, setCols] = useState(8)
   const [imageSize, setImageSize] = useState<{ width: number; height: number } | null>(null)
   const [localPreview, setLocalPreview] = useState<string | null>(null)
   const [selectedFormat, setSelectedFormat] = useState<LabelFormat | null>(LABEL_FORMATS[0])
@@ -42,13 +41,9 @@ function SetupPageContent() {
     }
   }, [slug, router])
 
-  useEffect(() => {
-    if (!imageSize || !selectedFormat) return
-    const imageRatio = imageSize.width / imageSize.height
-    const labelRatio = selectedFormat.widthMM / selectedFormat.heightMM
-    const calculatedCols = Math.max(1, Math.min(500, Math.round(rows * imageRatio / labelRatio)))
-    setCols(calculatedCols)
-  }, [rows, selectedFormat, imageSize])
+  const cols = imageSize && selectedFormat
+    ? Math.max(1, Math.min(500, Math.round(rows * (imageSize.width / imageSize.height) / (selectedFormat.widthMM / selectedFormat.heightMM))))
+    : 8
 
   // Wrap drawGridPreview in useCallback to prevent infinite re-renders
   const drawGridPreview = useCallback(() => {

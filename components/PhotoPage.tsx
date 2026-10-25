@@ -18,7 +18,7 @@ type BoothConfig = {
   stepTexts: { step1: string; step2: string; step3: string }
 }
 
-export default function PhotoPage() {
+function PhotoPageForProject() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const slug = searchParams.get('id')
@@ -45,8 +45,6 @@ export default function PhotoPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setErrorMessage(null)
     const init = async () => {
       if (!slug) return router.push('/admin')
 
@@ -332,4 +330,9 @@ export default function PhotoPage() {
       </div>
     </main>
   )
+}
+
+export default function PhotoPage() {
+  const searchParams = useSearchParams()
+  return <PhotoPageForProject key={searchParams.get('id') || ''} />
 }

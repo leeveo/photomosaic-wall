@@ -41,7 +41,8 @@ export default function PhotoBoothCustomizer({
   onDataChange
 }: PhotoBoothCustomizerProps) {
   const [projects, setProjects] = useState<Project[]>([])
-  const [selectedSlug, setSelectedSlug] = useState(initialSlug)
+  const [chosenSlug, setSelectedSlug] = useState(initialSlug)
+  const selectedSlug = forceSlug || chosenSlug
   const [config, setConfig] = useState<BoothConfig>({
     backgroundColor: '#000000',
     backgroundImage: '',
@@ -58,20 +59,13 @@ export default function PhotoBoothCustomizer({
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
-    // If forceSlug is provided, use it and don't allow changing
-    if (forceSlug) {
-      setSelectedSlug(forceSlug);
-    } else if (initialSlug) {
-      setSelectedSlug(initialSlug);
-    }
-    
     // Only fetch projects if we're not forcing a specific slug
     if (!hideProjectSelect) {
       supabase.from('projects').select('slug, title').then(({ data }) => {
         if (data) setProjects(data)
       });
     }
-  }, [forceSlug, initialSlug, hideProjectSelect])
+  }, [hideProjectSelect])
 
   useEffect(() => {
     if (!selectedSlug) return;

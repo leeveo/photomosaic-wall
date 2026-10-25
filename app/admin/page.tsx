@@ -295,26 +295,11 @@ function AdminPageContentWrapper() {
     return <div className="text-center text-gray-500">Aucun onglet sélectionné.</div>
   }
 
-  // Déplacez les hooks du dashboard en dehors de renderDashboard pour respecter les règles des hooks React
-  const [stats, setStats] = useState({
-    backgrounds: 0,
-    styles: 0,
-    configurations: 0,
-    totalPhotos: 0,
-  });
-  const [projectsWithPhotoCount, setProjectsWithPhotoCount] = useState<{ [k: string]: number }>({});
-  
-  // Remove unused state variable
-  // const [photoCountsLoading, setPhotoCountsLoading] = useState(false);
-
-  useEffect(() => {
-    setStats(s => ({ ...s, totalPhotos: tiles.length }));
-    const counts: { [k: string]: number } = {};
-    projects.forEach(p => {
-      counts[p.slug] = tiles.filter(t => t.project_slug === p.slug).length;
-    });
-    setProjectsWithPhotoCount(counts);
-  }, [tiles, projects]);
+  const stats = { backgrounds: 0, styles: 0, configurations: 0, totalPhotos: tiles.length }
+  const projectsWithPhotoCount: Record<string, number> = {}
+  for (const tile of tiles) {
+    projectsWithPhotoCount[tile.project_slug] = (projectsWithPhotoCount[tile.project_slug] || 0) + 1
+  }
 
   // Fonction pour charger les détails du projet depuis la base de données
   async function fetchProjectDetails(slug: string) {

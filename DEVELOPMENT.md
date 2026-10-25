@@ -1,6 +1,6 @@
 # Développement de PhotoMosaic Wall
 
-Depuis `/workspace/photomosaic-wall`, avec Node.js 24 et npm :
+Depuis `/workspace/photomosaic-wall`, avec Node.js 24 et npm. Le projet utilise Next.js 16.4.3 (Node.js 20.9 minimum), avec Turbopack et la configuration ESLint native de Next.js 16 :
 
 ```sh
 npm ci
@@ -29,3 +29,5 @@ Le design reprend le système blanc/violet/lavande du dépôt `leeveo/photomosai
 Corrections : effets Zustand qui relançaient les chargements, attribution infinie sur grille pleine, compte à rebours avec effets dans un setter React, double soumission de photo, `Buffer` indisponible dans le navigateur, gestion des images chargées depuis le cache, overlay appliqué deux fois, effacement du setup avant sauvegarde, ratio des étiquettes rectangulaires, QR code pointant vers localhost, configuration ESLint et double configuration Next.js. Le formulaire de création refuse aussi d’écraser un identifiant déjà utilisé et limite la résolution du plan imprimable.
 
 Les tests automatisés couvrent les positions libres, la grille pleine, les dimensions invalides et le chargement/échec des images. L’accueil et les états sans configuration ont été contrôlés dans Chromium en 1440 px et 390 px, sans débordement horizontal ni erreur JavaScript. Les opérations réelles de création, lecture, stockage, capture et impression restent à vérifier avec le projet Supabase et les appareils concernés.
+
+La migration vers Next.js 16 dérive les colonnes et les statistiques directement des données, réinitialise les vues par identifiant de projet et utilise les règles React Hooks actuelles sans les désactiver. Next.js et eslint-config-next sont verrouillés à la même version ; le lockfile doit être déployé avec package.json.

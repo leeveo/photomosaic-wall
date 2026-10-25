@@ -2,7 +2,7 @@
 
 import EnvironmentGate from '@/components/EnvironmentGate'
 
-import { Suspense, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import MosaicCanvas from '@/components/MosaicCanvas'
 import { usePhotoMosaicStore } from '@/lib/store'
@@ -23,6 +23,10 @@ type DbTile = {
   col: number
 }
 
+const subscribeToCapabilities = () => () => {}
+const getFullscreenSupport = () => Boolean(document.documentElement.requestFullscreen)
+const getServerFullscreenSupport = () => false
+
 function MosaicPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -38,21 +42,12 @@ function MosaicPageContent() {
 
   // Plein écran states
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showFullscreenButton, setShowFullscreenButton] = useState(true)
-  const [wantsFullscreen, setWantsFullscreen] = useState(false)
-
-  // Vérifie si l'utilisateur veut le fullscreen via l'URL
-  useEffect(() => {
-    if (searchParams.get('fullscreen') === 'true') {
-      setWantsFullscreen(true)
-    }
-  }, [searchParams])
+  const showFullscreenButton = useSyncExternalStore(subscribeToCapabilities, getFullscreenSupport, getServerFullscreenSupport)
+  const wantsFullscreen = searchParams.get('fullscreen') === 'true'
 
   useEffect(() => {
     let interval: ReturnType<typeof setTimeout> | undefined
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
     const fetchData = async () => {
       if (!slug) {
@@ -125,11 +120,6 @@ function MosaicPageContent() {
     return () => document.removeEventListener('fullscreenchange', handleChange)
   }, [])
 
-  // Optionnel : masquer le bouton si non supporté
-  useEffect(() => {
-    setShowFullscreenButton(typeof document !== 'undefined' && !!document.documentElement.requestFullscreen)
-  }, [])
-
   // Placeholder pour le background
   function getBackgroundStyle() {
     return { background: '#18181b' }
@@ -199,10 +189,15 @@ function MosaicPageContent() {
   )
 }
 
+function MosaicForProject() {
+  const searchParams = useSearchParams()
+  return <MosaicPageContent key={searchParams.get('id') || ''} />
+}
+
 function MosaicPageContentWrapper() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Chargement de la mosaïque...</div>}>
-      <MosaicPageContent />
+      <MosaicForProject />
     </Suspense>
   )
 }

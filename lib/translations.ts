@@ -178,5 +178,12 @@ export const translations: Record<string, string> = {
   "❌ Erreur impression : ": "Print error: ",
   "🖨️ Impression lancée avec succès": "Print job started successfully",
   "Erreur lors de la préparation à l’impression.": "Unable to prepare print job.",
-  "Erreur lors de la suppression de l'image.": "Unable to delete image."
+  "Erreur lors de la suppression de l'image.": "Unable to delete image.",
+  "Vos événements sont affichés, mais certaines configurations ou photos sont indisponibles.": "Your events are visible, but some settings or photos are unavailable.",
+  "Accès refusé par Supabase. Vérifiez les droits et les politiques d’accès du projet.": "Supabase denied access. Check the project permissions and access policies.",
+  "La clé Supabase est invalide ou la session a expiré. Vérifiez la configuration du déploiement.": "The Supabase key is invalid or the session has expired. Check the deployment configuration.",
+  "Le schéma Supabase ne correspond pas à l’application. Vérifiez les tables et les colonnes requises.": "The Supabase schema does not match the application. Check the required tables and columns.",
+  "Cet identifiant existe déjà. Choisissez un autre identifiant.": "This identifier already exists. Choose another identifier.",
+  "Supabase est inaccessible. Vérifiez la connexion réseau et l’URL du projet.": "Supabase is unreachable. Check the network connection and project URL.",
+  "L’opération Supabase a échoué. Vérifiez le projet connecté et ses droits d’accès.": "The Supabase operation failed. Check the connected project and its permissions."
 }

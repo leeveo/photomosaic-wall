@@ -4,6 +4,7 @@ import { T, useLanguage } from '@/components/LanguageProvider'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { databaseErrorMessage } from '@/lib/database-errors'
 import { usePhotoMosaicStore } from '@/lib/store'
 import Modal from './Modal'
 import PhotoBoothCustomizer from './PhotoBoothCustomizer'
@@ -210,7 +211,7 @@ export default function CreateProject() {
     }
     // Vérifier si le projet existe déjà
     const existing = await supabase.from('projects').select().eq('slug', slug).maybeSingle();
-    if (existing.error) { alert(t("Impossible de vérifier la disponibilité de cet identifiant.")); return false; }
+    if (existing.error) { alert(t(databaseErrorMessage(existing.error))); return false; }
     if (existing.data) {
       if (createdSlug === slug) return true;
       alert(t("Cet identifiant est déjà utilisé. Choisissez-en un autre pour préserver le projet existant."));
@@ -219,7 +220,7 @@ export default function CreateProject() {
     // Créer le projet
     const { error: errProject } = await supabase.from('projects').insert([{ slug, title }]);
     if (errProject) {
-      alert(t("Erreur création projet"));
+      alert(t(databaseErrorMessage(errProject)));
       return false;
     }
     setProjectCreated(true);
@@ -247,7 +248,7 @@ export default function CreateProject() {
 
     if (errSetup) {
       console.error('Error saving setup data:', errSetup);
-      alert(t("Erreur lors de l'enregistrement des paramètres de configuration"));
+      alert(t(databaseErrorMessage(errSetup)));
       return;
     }
 
@@ -283,7 +284,7 @@ export default function CreateProject() {
       const { error } = await supabase.from('designs').upsert(boothData, { onConflict: 'project_slug' });
       if (error) {
         console.error('Error saving booth design:', error);
-        alert(t("Erreur lors de l'enregistrement du design du photobooth"));
+        alert(t(databaseErrorMessage(error)));
         return;
       }
       setStep(2);
@@ -315,7 +316,7 @@ export default function CreateProject() {
     const { error: flyerError } = await supabase.from('flyers').upsert(flyerData, { onConflict: 'project_slug' });
     if (flyerError) {
       console.error('Error saving flyer data:', flyerError);
-      alert(t("Impossible d’enregistrer le flyer. Réessayez."));
+      alert(t(databaseErrorMessage(flyerError)));
       return;
     }
 

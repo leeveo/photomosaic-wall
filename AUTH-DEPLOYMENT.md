@@ -7,16 +7,8 @@ Le code fournit `/signup`, `/login`, `/logout`, `/reset-password` et `/account`,
 1. Sauvegarder la base et prévoir une fenêtre de maintenance : la migration rend les buckets `tiles` et `backgrounds` privés et remplace les anciennes politiques publiques sur les tables de l'application. Les anciens liens sans invitation ne donneront plus accès aux photos. Les URL signées déjà émises restent utilisables jusqu'à leur expiration (une heure pour les nouvelles URL).
 2. Vérifier les tables du schéma `lib/db.schema.sql`, puis appliquer `supabase/migrations/20261025_accounts_and_events.sql` via les migrations Supabase ou l'éditeur SQL administrateur. Ne pas recréer/effacer les tables existantes. Le script conserve les événements existants avec `owner_id NULL` : aucun nouvel inscrit ne les récupère automatiquement.
 3. Dans Supabase Auth, activer les comptes e-mail/mot de passe, la confirmation d'e-mail et les connexions anonymes pour les invités. Configurer un SMTP de production, les limites de débit et la protection anti-abus adaptées au service. Définir Site URL avec le domaine de production et autoriser exactement `https://VOTRE-DOMAINE/account` et `https://VOTRE-DOMAINE/reset-password` comme URL de redirection. Ajouter séparément les domaines de test souhaités.
-4. Créer le compte de l'organisateur historique et confirmer son e-mail. Après vérification de son identité, attribuer explicitement ses anciens événements, par liste de slugs. Exemple à adapter dans l'éditeur SQL administrateur :
+4. Le propriétaire désigné des anciens événements est **`marcmenu707@gmail.com`**. Créer ce compte via `/signup` et confirmer son e-mail, puis exécuter `supabase/admin/assign_legacy_events.sql` dans l'éditeur SQL administrateur. Le script exige un unique compte confirmé et non anonyme, attribue uniquement les événements dont `owner_id IS NULL`, et journalise l'attribution. Il peut être relancé sans réattribuer les événements déjà possédés. Il ne change ni les abonnements ni le statut des événements : les anciens événements restés en brouillon pourront être publiés depuis le studio après activation de l'abonnement.
 
-   ```sql
-   UPDATE public.projects
-   SET owner_id = (SELECT id FROM auth.users WHERE email = 'EMAIL_VERIFIE'),
-       status = 'active'
-   WHERE owner_id IS NULL AND slug IN ('SLUG_VERIFIE');
-   ```
-
-   Ne pas exécuter avec les valeurs d'exemple. L'e-mail de l'organisateur historique doit encore être confirmé. L'identité Git n'est pas utilisée pour attribuer les données.
 5. Dans Stripe, créer un produit et son prix récurrent. Activer le portail client. Créer un endpoint `https://VOTRE-DOMAINE/api/billing/webhook` pour `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`. Le webhook vérifie la signature, relit l'abonnement Stripe et applique les événements de manière idempotente. Le retour de Checkout seul n'accorde jamais un abonnement.
 6. Configurer les variables ci-dessous dans Vercel (test et production séparément), puis redéployer. Ne jamais envoyer les secrets dans le chat ou les committer.
 

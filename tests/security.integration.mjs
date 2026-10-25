@@ -62,4 +62,18 @@ await as(alice);await assert.rejects(()=>db.exec("SELECT public.save_event('alic
 console.log('PASS atomic rollback and duplication');
 await db.exec('RESET ROLE');await db.exec(`UPDATE public.subscriptions SET current_period_end=now()-interval '1 day' WHERE user_id='${alice}'`);await as(alice);await assert.rejects(()=>db.exec(save));
 console.log('PASS expired subscription cannot write');
+await db.exec('RESET ROLE');
+await db.exec("ALTER TABLE auth.users ADD COLUMN email text, ADD COLUMN email_confirmed_at timestamptz, ADD COLUMN is_anonymous boolean DEFAULT false");
+await db.exec("INSERT INTO public.projects(slug,title,owner_id) VALUES('legacy-event','Legacy event',NULL)");
+const assignLegacy=fs.readFileSync(path.join(__dirname,'../supabase/admin/assign_legacy_events.sql'),'utf8');
+await assert.rejects(()=>db.exec(assignLegacy));
+await db.query('UPDATE auth.users SET email=$1 WHERE id=$2',['marcmenu707@gmail.com',alice]);
+await assert.rejects(()=>db.exec(assignLegacy));
+assert.equal((await db.query("SELECT owner_id FROM public.projects WHERE slug='legacy-event'")).rows[0].owner_id,null);
+await db.query('UPDATE auth.users SET email_confirmed_at=now() WHERE id=$1',[alice]);
+await db.exec(assignLegacy);await db.exec(assignLegacy);
+assert.equal((await db.query("SELECT owner_id FROM public.projects WHERE slug='legacy-event'")).rows[0].owner_id,alice);
+assert.equal((await db.query("SELECT owner_id FROM public.projects WHERE slug='bob-event'")).rows[0].owner_id,bob);
+assert.equal((await db.query("SELECT count(*)::int AS total FROM public.event_activity WHERE action='legacy_owner_assigned'")).rows[0].total,1);
+console.log('PASS legacy assignment requires a confirmed account, preserves existing owners and is idempotent');
 await db.close()})().catch(e=>{console.error(e);process.exit(1)});

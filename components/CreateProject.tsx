@@ -1,5 +1,7 @@
 'use client'
 
+import { T, useLanguage } from '@/components/LanguageProvider'
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { usePhotoMosaicStore } from '@/lib/store'
@@ -15,6 +17,7 @@ const LABEL_FORMATS = [
 ]
 
 export default function CreateProject() {
+  const { t } = useLanguage()
   const { setImage, setGrid } = usePhotoMosaicStore()
 
   const [slug, setSlug] = useState('')
@@ -127,10 +130,10 @@ export default function CreateProject() {
 
         setImageSize({ width: canvas.width, height: canvas.height })
       }
-      img.onerror = () => alert('Le fichier sélectionné n’est pas une image valide.')
+      img.onerror = () => alert(t("Le fichier sélectionné n’est pas une image valide."))
       img.src = result
     }
-    reader.onerror = () => alert('Impossible de lire ce fichier.')
+    reader.onerror = () => alert(t("Impossible de lire ce fichier."))
     reader.readAsDataURL(file)
   }
 
@@ -202,21 +205,21 @@ export default function CreateProject() {
   // Nouvelle fonction pour créer le projet (projects) uniquement
   const handleCreateProjectOnly = async () => {
     if (!slug || !title) {
-      alert('Veuillez remplir le nom et le slug du projet.');
+      alert(t("Veuillez remplir le nom et le slug du projet."));
       return false;
     }
     // Vérifier si le projet existe déjà
     const existing = await supabase.from('projects').select().eq('slug', slug).maybeSingle();
-    if (existing.error) { alert('Impossible de vérifier la disponibilité de cet identifiant.'); return false; }
+    if (existing.error) { alert(t("Impossible de vérifier la disponibilité de cet identifiant.")); return false; }
     if (existing.data) {
       if (createdSlug === slug) return true;
-      alert('Cet identifiant est déjà utilisé. Choisissez-en un autre pour préserver le projet existant.');
+      alert(t("Cet identifiant est déjà utilisé. Choisissez-en un autre pour préserver le projet existant."));
       return false;
     }
     // Créer le projet
     const { error: errProject } = await supabase.from('projects').insert([{ slug, title }]);
     if (errProject) {
-      alert('Erreur création projet');
+      alert(t("Erreur création projet"));
       return false;
     }
     setProjectCreated(true);
@@ -226,7 +229,7 @@ export default function CreateProject() {
 
   const handleCreate = async () => {
     if (!slug || !title || !localPreview || !eventDate) {
-      alert('Veuillez remplir tous les champs.');
+      alert(t("Veuillez remplir tous les champs."));
       return;
     }
 
@@ -244,7 +247,7 @@ export default function CreateProject() {
 
     if (errSetup) {
       console.error('Error saving setup data:', errSetup);
-      alert('Erreur lors de l\'enregistrement des paramètres de configuration');
+      alert(t("Erreur lors de l'enregistrement des paramètres de configuration"));
       return;
     }
 
@@ -280,7 +283,7 @@ export default function CreateProject() {
       const { error } = await supabase.from('designs').upsert(boothData, { onConflict: 'project_slug' });
       if (error) {
         console.error('Error saving booth design:', error);
-        alert('Erreur lors de l\'enregistrement du design du photobooth');
+        alert(t("Erreur lors de l'enregistrement du design du photobooth"));
         return;
       }
       setStep(2);
@@ -312,7 +315,7 @@ export default function CreateProject() {
     const { error: flyerError } = await supabase.from('flyers').upsert(flyerData, { onConflict: 'project_slug' });
     if (flyerError) {
       console.error('Error saving flyer data:', flyerError);
-      alert('Impossible d’enregistrer le flyer. Réessayez.');
+      alert(t("Impossible d’enregistrer le flyer. Réessayez."));
       return;
     }
 
@@ -331,14 +334,11 @@ export default function CreateProject() {
             <h3 className="text-xl font-semibold text-blue-800 mb-5 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Informations du projet
-              <span className="ml-2 text-xs text-red-500 font-normal">* Champs obligatoires</span>
+              </svg><T text={"Informations du projet"} /><span className="ml-2 text-xs text-red-500 font-normal"><T text={"* Champs obligatoires"} /></span>
             </h3>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <label className="block mb-2 font-medium text-blue-700">
-                  Nom du projet <span className="text-red-500">*</span>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Nom du projet"} /><span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
@@ -350,13 +350,12 @@ export default function CreateProject() {
                     className="w-full border border-blue-200 bg-white rounded-lg px-10 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Nom de votre événement"
+                    placeholder={t("Nom de votre événement")}
                   />
                 </div>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-blue-700">
-                  Slug (identifiant) <span className="text-red-500">*</span>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Slug (identifiant)"} /><span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
@@ -368,14 +367,13 @@ export default function CreateProject() {
                     className="w-full border border-blue-200 bg-white rounded-lg px-10 py-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
-                    placeholder="identifiant-unique-sans-espaces"
+                    placeholder={t("identifiant-unique-sans-espaces")}
                   />
                 </div>
-                <p className="mt-1 text-xs text-blue-600">Utilisé pour les URL, uniquement lettres, chiffres et tirets</p>
+                <p className="mt-1 text-xs text-blue-600"><T text={"Utilisé pour les URL, uniquement lettres, chiffres et tirets"} /></p>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-blue-700">
-                  Date de l&apos;événement <span className="text-red-500">*</span>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Date de l'événement"} /><span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
@@ -392,8 +390,7 @@ export default function CreateProject() {
                 </div>
               </div>
               <div>
-                <label className="block mb-2 font-medium text-blue-700">
-                  Image principale <span className="text-red-500">*</span>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Image principale"} /><span className="text-red-500">*</span>
                 </label>
                 <div className="flex items-center gap-3">
                   <label
@@ -402,9 +399,7 @@ export default function CreateProject() {
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Choisir une image
-                    <input
+                    </svg><T text={"Choisir une image"} /><input
                       id="main-image-upload"
                       type="file"
                       accept="image/*"
@@ -445,12 +440,10 @@ export default function CreateProject() {
             <h3 className="text-xl font-semibold text-purple-800 mb-5 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-              </svg>
-              Format et dimensions
-            </h3>
+              </svg><T text={"Format et dimensions"} /></h3>
             <div className="space-y-6">
               <div>
-                <label className="block mb-3 font-medium text-purple-700">Format d&apos;étiquette</label>
+                <label className="block mb-3 font-medium text-purple-700"><T text={"Format d'étiquette"} /></label>
                 <div className="flex flex-wrap gap-4">
                   {LABEL_FORMATS.map(format => (
                     <label 
@@ -491,7 +484,7 @@ export default function CreateProject() {
                       </svg>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-500">Nombre de lignes</label>
+                      <label className="block text-sm text-gray-500"><T text={"Nombre de lignes"} /></label>
                       <div className="flex items-center mt-1">
                         <button 
                           className="h-10 w-10 rounded-l-lg bg-purple-100 text-purple-700 hover:bg-purple-200 flex items-center justify-center"
@@ -528,9 +521,9 @@ export default function CreateProject() {
                       </svg>
                     </div>
                     <div>
-                      <label className="block text-sm text-gray-500">Nombre de colonnes</label>
+                      <label className="block text-sm text-gray-500"><T text={"Nombre de colonnes"} /></label>
                       <div className="font-semibold text-xl text-indigo-700 mt-1">{cols}</div>
-                      <span className="text-xs text-gray-500">(calculé automatiquement)</span>
+                      <span className="text-xs text-gray-500"><T text={"(calculé automatiquement)"} /></span>
                     </div>
                   </div>
                 </div>
@@ -539,15 +532,15 @@ export default function CreateProject() {
               {/* Stats cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
                 <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-3 rounded-lg">
-                  <div className="text-xs text-indigo-100">Total photos</div>
+                  <div className="text-xs text-indigo-100"><T text={"Total photos"} /></div>
                   <div className="text-xl font-bold">{rows * cols}</div>
                 </div>
                 <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-3 rounded-lg">
-                  <div className="text-xs text-blue-100">Format étiquette</div>
+                  <div className="text-xs text-blue-100"><T text={"Format étiquette"} /></div>
                   <div className="text-xl font-bold">{selectedFormat.widthMM} × {selectedFormat.heightMM}<span className="text-sm"> mm</span></div>
                 </div>
                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-3 rounded-lg col-span-2">
-                  <div className="text-xs text-purple-100">Dimension finale</div>
+                  <div className="text-xs text-purple-100"><T text={"Dimension finale"} /></div>
                   <div className="text-xl font-bold">
                     {((selectedFormat.widthMM * cols) / 10).toFixed(1)} × {((selectedFormat.heightMM * rows) / 10).toFixed(1)}<span className="text-sm"> cm</span>
                   </div>
@@ -563,10 +556,8 @@ export default function CreateProject() {
                   <h4 className="text-lg font-semibold text-gray-800 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Aperçu du découpage
-                  </h4>
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">Grille {rows}×{cols}</span>
+                    </svg><T text={"Aperçu du découpage"} /></h4>
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded"><T text={"Grille"} />{rows}×{cols}</span>
                 </div>
                 <div className="bg-gradient-to-br from-gray-100 to-gray-200 p-3 rounded-lg shadow-inner">
                   <canvas ref={canvasRef} style={{ 
@@ -581,9 +572,7 @@ export default function CreateProject() {
                 <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm12 0a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-                  </svg>
-                  Plan de collage
-                </h4>
+                  </svg><T text={"Plan de collage"} /></h4>
                 <GridReference 
                   rows={rows} 
                   cols={cols} 
@@ -634,7 +623,7 @@ export default function CreateProject() {
             <div className={`rounded-full w-8 h-8 flex items-center justify-center font-bold text-white ${step === idx ? 'bg-indigo-600' : 'bg-gray-300'}`}>
               {idx + 1}
             </div>
-            <span className={`ml-2 font-semibold ${step === idx ? 'text-indigo-700' : 'text-gray-500'}`}>{s.label}</span>
+            <span className={`ml-2 font-semibold ${step === idx ? 'text-indigo-700' : 'text-gray-500'}`}><T text={s.label} /></span>
             {idx < steps.length - 1 && <span className="mx-3 text-gray-400">→</span>}
           </div>
         ))}
@@ -646,8 +635,8 @@ export default function CreateProject() {
     <div className="space-y-8">
       {/* Header gradient */}
       <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
-        <h2 className="text-3xl font-bold mb-2">➕ Créer un nouveau projet</h2>
-        <p className="text-white text-opacity-80">Configurez un nouveau mur mosaïque photo pour votre événement.</p>
+        <h2 className="text-3xl font-bold mb-2"><T text={"➕ Créer un nouveau projet"} /></h2>
+        <p className="text-white text-opacity-80"><T text={"Configurez un nouveau mur mosaïque photo pour votre événement."} /></p>
       </div>
 
       {/* Wizard steps header */}
@@ -664,9 +653,7 @@ export default function CreateProject() {
           onClick={() => setStep(s => Math.max(0, s - 1))}
           disabled={step === 0}
           className={`px-6 py-2 rounded font-semibold shadow transition ${step === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gradient-to-br from-gray-200 to-gray-400 text-gray-700 hover:from-gray-300 hover:to-gray-500'}`}
-        >
-          ← Précédent
-        </button>
+        ><T text={"← Précédent"} /></button>
         {step < steps.length - 1 ? (
           <button
             onClick={handleNextStep}
@@ -678,9 +665,7 @@ export default function CreateProject() {
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700'
             }`}
-          >
-            Suivant →
-          </button>
+          ><T text={"Suivant →"} /></button>
         ) : (
           <button
             onClick={handleFinalSave}
@@ -690,17 +675,15 @@ export default function CreateProject() {
                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-br from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700'
             }`}
-          >
-            🚀 Enregistrer et lancer le projet
-          </button>
+          ><T text={"🚀 Enregistrer et lancer le projet"} /></button>
         )}
       </div>
 
       {/* Modal for success message */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <div className="text-center">
-          <h3 className="text-2xl font-bold text-purple-700 mb-4">✅ Projet créé avec succès !</h3>
-          <p className="text-gray-600">Votre projet a été créé et est prêt à être utilisé.</p>
+          <h3 className="text-2xl font-bold text-purple-700 mb-4"><T text={"✅ Projet créé avec succès !"} /></h3>
+          <p className="text-gray-600"><T text={"Votre projet a été créé et est prêt à être utilisé."} /></p>
           <button
             onClick={() => setIsModalOpen(false)}
             className="mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold shadow"
@@ -847,7 +830,7 @@ function GridReference({
     <div className="space-y-6 max-w-full">
       {/* Cell reference mini-grid preview */}
       <div className="bg-white rounded-xl shadow-lg p-4 border border-indigo-100">
-        <h4 className="text-sm font-medium text-gray-500 uppercase mb-3">Référencement des cellules</h4>
+        <h4 className="text-sm font-medium text-gray-500 uppercase mb-3"><T text={"Référencement des cellules"} /></h4>
         <div
           className="custom-scrollbar"
           style={{
@@ -905,8 +888,8 @@ function GridReference({
       {generatedPreview && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100">
-            <h4 className="font-medium text-indigo-800">Aperçu du plan de collage</h4>
-            <p className="text-xs text-indigo-500">Plan à l&apos;échelle réelle pour impression</p>
+            <h4 className="font-medium text-indigo-800"><T text={"Aperçu du plan de collage"} /></h4>
+            <p className="text-xs text-indigo-500"><T text={"Plan à l'échelle réelle pour impression"} /></p>
           </div>
           <div className="p-4">
             <div className="rounded-lg overflow-hidden border border-gray-200">
@@ -928,9 +911,7 @@ function GridReference({
           <h4 className="font-semibold text-white flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m-1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Informations d&apos;impression
-          </h4>
+            </svg><T text={"Informations d'impression"} /></h4>
         </div>
         <div className="p-4">
           <div className="grid md:grid-cols-2 gap-4">
@@ -941,7 +922,7 @@ function GridReference({
                 </svg>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Format total</div>
+                <div className="text-xs text-gray-500"><T text={"Format total"} /></div>
                 <div className="font-bold text-lg text-blue-800">{totalWidthCM.toFixed(1)} × {totalHeightCM.toFixed(1)} cm</div>
               </div>
             </div>
@@ -953,7 +934,7 @@ function GridReference({
                 </svg>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Format étiquettes</div>
+                <div className="text-xs text-gray-500"><T text={"Format étiquettes"} /></div>
                 <div className="font-bold text-lg text-indigo-800">{formatWidthMM} × {formatHeightMM} mm</div>
               </div>
             </div>
@@ -964,7 +945,7 @@ function GridReference({
                 </svg>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Configuration</div>
+                <div className="text-xs text-gray-500"><T text={"Configuration"} /></div>
                 <div className="font-bold text-lg text-purple-800">{rows} × {cols}</div>
               </div>
             </div>
@@ -975,7 +956,7 @@ function GridReference({
                 </svg>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Nombre d&apos;étiquettes</div>
+                <div className="text-xs text-gray-500"><T text={"Nombre d'étiquettes"} /></div>
                 <div className="font-bold text-lg text-pink-800">{rows * cols}</div>
               </div>
             </div>
@@ -997,15 +978,13 @@ function GridReference({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span>Génération en cours...</span>
+              <span><T text={"Génération en cours..."} /></span>
             </div>
           ) : (
             <>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Télécharger plan de collage à l&apos;échelle réelle
-            </>
+              </svg><T text={"Télécharger plan de collage à l'échelle réelle"} /></>
           )}
         </button>
         
@@ -1016,21 +995,16 @@ function GridReference({
                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
             </div>
-            <h5 className="font-medium text-amber-800">Instructions d&apos;impression</h5>
+            <h5 className="font-medium text-amber-800"><T text={"Instructions d'impression"} /></h5>
           </div>
           <ul className="space-y-2 text-sm text-amber-800 ml-9">
             <li className="flex items-center">
-              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Format à l&apos;échelle réelle (10 pixels = 1mm)
+              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Format à l'échelle réelle (10 pixels = 1mm)"} /></li>
+            <li className="flex items-center">
+              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Option d'impression:"} /><strong><T text={"Taille réelle"} /></strong><T text={"ou"} /><strong>100%</strong>
             </li>
             <li className="flex items-center">
-              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Option d&apos;impression: <strong>Taille réelle</strong> ou <strong>100%</strong>
-            </li>
-            <li className="flex items-center">
-              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-              Pour grands formats: impression Poster ou plusieurs pages
-            </li>
+              <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Pour grands formats: impression Poster ou plusieurs pages"} /></li>
           </ul>
         </div>
       </div>

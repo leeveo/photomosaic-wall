@@ -1,3 +1,4 @@
+import { T, useLanguage } from '@/components/LanguageProvider'
 import React, { useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
@@ -47,6 +48,7 @@ const PhotosTab: React.FC<Props> = ({
   tileToDelete,
   deleteTile,
 }) => {
+  const { t } = useLanguage()
   // Direct rendering approach without processing URLs
   const filteredTiles = selectedProject === 'all'
     ? tiles
@@ -93,13 +95,13 @@ const PhotosTab: React.FC<Props> = ({
 
       if (!response.ok) {
         const err = await response.text()
-        alert('❌ Erreur impression : ' + err)
+        alert(t("❌ Erreur impression : ") + err)
       } else {
-        alert('🖨️ Impression lancée avec succès')
+        alert(t("🖨️ Impression lancée avec succès"))
       }
     } catch (err) {
       console.error(err)
-      alert('Erreur lors de la préparation à l’impression.')
+      alert(t("Erreur lors de la préparation à l’impression."))
     }
   }
 
@@ -111,21 +113,19 @@ const PhotosTab: React.FC<Props> = ({
 
   return (
     <section className="space-y-6">
-      <h2 className="text-2xl font-bold mb-6 text-black">🖼️ Photos par projet</h2>
+      <h2 className="text-2xl font-bold mb-6 text-black"><T text={"🖼️ Photos par projet"} /></h2>
 
       {/* Controls for project selection */}
       <div className="bg-white shadow rounded-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-          <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-0">
-            Filtrer par projet :
-          </label>
+          <label htmlFor="project-select" className="block text-sm font-medium text-gray-700 mb-0"><T text={"Filtrer par projet :"} /></label>
           <select
             id="project-select"
             value={selectedProject}
             onChange={e => setSelectedProject(e.target.value)}
             className="block w-full sm:w-auto pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-gray-100"
           >
-            <option value="all">📦 Tous les projets</option>
+            <option value="all"><T text={"📦 Tous les projets"} /></option>
             {projects.map(p => (
               <option key={p.slug} value={p.slug}>
                 {p.title} ({p.tilesCount})
@@ -135,15 +135,11 @@ const PhotosTab: React.FC<Props> = ({
           <button
             onClick={refreshTiles}
             className="inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            🔄 Actualiser
-          </button>
+          ><T text={"🔄 Actualiser"} /></button>
         </div>
 
         {filteredTiles.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            Aucune photo trouvée pour ce projet.
-          </div>
+          <div className="text-center py-12 text-gray-500"><T text={"Aucune photo trouvée pour ce projet."} /></div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
             {filteredTiles.map(tile => {
@@ -201,7 +197,7 @@ const PhotosTab: React.FC<Props> = ({
       {showDeleteModal && tileToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-xl w-[90%] max-w-sm p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-800">Supprimer cette image ?</h3>
+            <h3 className="text-lg font-bold mb-4 text-gray-800"><T text={"Supprimer cette image ?"} /></h3>
             {/* Use img tag for simplicity */}
             <Image unoptimized width={300} height={300}
               src={getImageUrl(tileToDelete.url)}
@@ -219,22 +215,18 @@ const PhotosTab: React.FC<Props> = ({
                     setTiles(tiles.filter(tile => tile.id !== tileToDelete.id));
                   } catch (err) {
                     console.error("Error deleting tile:", err);
-                    alert('Erreur lors de la suppression de l\'image.');
+                    alert(t("Erreur lors de la suppression de l'image."));
                   }
                 }}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md bg-gradient-to-br from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 shadow"
-              >
-                Supprimer
-              </button>
+              ><T text={"Supprimer"} /></button>
               <button
                 onClick={() => {
                   setTileToDelete(null)
                   setShowDeleteModal(false)
                 }}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md bg-white text-gray-700 hover:bg-gray-50 shadow"
-              >
-                Annuler
-              </button>
+              ><T text={"Annuler"} /></button>
             </div>
           </div>
         </div>

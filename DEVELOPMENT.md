@@ -31,3 +31,9 @@ Corrections : effets Zustand qui relançaient les chargements, attribution infin
 Les tests automatisés couvrent les positions libres, la grille pleine, les dimensions invalides et le chargement/échec des images. L’accueil et les états sans configuration ont été contrôlés dans Chromium en 1440 px et 390 px, sans débordement horizontal ni erreur JavaScript. Les opérations réelles de création, lecture, stockage, capture et impression restent à vérifier avec le projet Supabase et les appareils concernés.
 
 La migration vers Next.js 16 dérive les colonnes et les statistiques directement des données, réinitialise les vues par identifiant de projet et utilise les règles React Hooks actuelles sans les désactiver. Next.js et eslint-config-next sont verrouillés à la même version ; le lockfile doit être déployé avec package.json.
+
+## Studio responsive et langues
+
+La page `/admin` propose une navigation adaptative, une recherche et des filtres sur les événements, ainsi que des statistiques calculées à partir des photos. Le chargement initial regroupe les lectures des projets, configurations et photos en trois requêtes. La langue FR/EN est mémorisée localement ; les libellés sont centralisés dans `lib/translations.ts`. Les textes personnalisés par les organisateurs restent leurs contenus originaux.
+
+Sans connexion Supabase, le cadre du studio est visible avec un message explicite ; les compteurs restent non renseignés. Les éditeurs sont protégés par leur écran de connexion.

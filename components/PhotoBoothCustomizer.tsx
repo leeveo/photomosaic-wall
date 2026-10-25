@@ -1,5 +1,7 @@
 'use client'
 
+import { T, useLanguage } from '@/components/LanguageProvider'
+
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Modal from './Modal'
@@ -40,6 +42,7 @@ export default function PhotoBoothCustomizer({
   hideProjectSelect = false,
   onDataChange
 }: PhotoBoothCustomizerProps) {
+  const { t } = useLanguage()
   const [projects, setProjects] = useState<Project[]>([])
   const [chosenSlug, setSelectedSlug] = useState(initialSlug)
   const selectedSlug = forceSlug || chosenSlug
@@ -143,7 +146,7 @@ export default function PhotoBoothCustomizer({
         setConfig(prev => ({ ...prev, backgroundImage: publicUrlResult.data.publicUrl }));
       }
     } else {
-      alert("Erreur lors de l'upload de l'image.");
+      alert(t("Erreur lors de l'upload de l'image."));
     }
   };
 
@@ -169,7 +172,7 @@ export default function PhotoBoothCustomizer({
     setIsSaving(false);
     
     if (!error) setShowModal(true);
-    else alert('❌ Erreur lors de la sauvegarde.');
+    else alert(t("❌ Erreur lors de la sauvegarde."));
   };
 
   // Call onDataChange whenever config changes
@@ -186,8 +189,8 @@ export default function PhotoBoothCustomizer({
     <div className="space-y-8 max-w-6xl">
       {!hideProjectSelect && (
         <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
-          <h2 className="text-3xl font-bold mb-2">🎨 Design du Photobooth</h2>
-          <p className="text-white text-opacity-80">Personnalisez l&apos;apparence de votre photobooth pour votre événement.</p>
+          <h2 className="text-3xl font-bold mb-2"><T text={"🎨 Design du Photobooth"} /></h2>
+          <p className="text-white text-opacity-80"><T text={"Personnalisez l'apparence de votre photobooth pour votre événement."} /></p>
         </div>
       )}
       
@@ -200,9 +203,7 @@ export default function PhotoBoothCustomizer({
               <h3 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Sélection du projet
-              </h3>
+                </svg><T text={"Sélection du projet"} /></h3>
               
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-500">
@@ -216,7 +217,7 @@ export default function PhotoBoothCustomizer({
                   onChange={(e) => setSelectedSlug(e.target.value)}
                   disabled={!!forceSlug}
                 >
-                  <option value="">-- Sélectionnez un projet --</option>
+                  <option value=""><T text={"-- Sélectionnez un projet --"} /></option>
                   {projects.map((p) => (
                     <option key={p.slug} value={p.slug}>
                       {p.title}
@@ -232,13 +233,11 @@ export default function PhotoBoothCustomizer({
             <h3 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-              </svg>
-              Couleurs et Arrière-plan
-            </h3>
+              </svg><T text={"Couleurs et Arrière-plan"} /></h3>
             
             <div className="space-y-5">
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Image d&apos;arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700"><T text={"Image d'arrière-plan"} /></label>
                 <div className="flex flex-wrap gap-3 items-center">
                   <label
                     htmlFor="background-upload"
@@ -246,9 +245,7 @@ export default function PhotoBoothCustomizer({
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Choisir un fichier
-                    <input
+                    </svg><T text={"Choisir un fichier"} /><input
                       id="background-upload"
                       type="file"
                       accept="image/*"
@@ -263,9 +260,7 @@ export default function PhotoBoothCustomizer({
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    Galerie
-                  </button>
+                    </svg><T text={"Galerie"} /></button>
                   
                   {config.backgroundImage && (
                     <div className="relative group h-14 w-14 rounded-lg shadow-sm overflow-hidden border border-purple-200">
@@ -285,12 +280,12 @@ export default function PhotoBoothCustomizer({
                     </div>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-purple-600">Choisissez une image d&apos;arrière-plan pour votre photobooth.</p>
+                <p className="mt-1 text-xs text-purple-600"><T text={"Choisissez une image d'arrière-plan pour votre photobooth."} /></p>
               </div>
               
               <div className="grid md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block mb-2 font-medium text-purple-700">Couleur d&apos;arrière-plan</label>
+                  <label className="block mb-2 font-medium text-purple-700"><T text={"Couleur d'arrière-plan"} /></label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
@@ -303,7 +298,7 @@ export default function PhotoBoothCustomizer({
                 </div>
                 
                 <div>
-                  <label className="block mb-2 font-medium text-purple-700">Couleur des boutons</label>
+                  <label className="block mb-2 font-medium text-purple-700"><T text={"Couleur des boutons"} /></label>
                   <div className="flex items-center space-x-3">
                     <input
                       type="color"
@@ -323,13 +318,11 @@ export default function PhotoBoothCustomizer({
             <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Textes des étapes
-            </h3>
+              </svg><T text={"Textes des étapes"} /></h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 font-medium text-blue-700">Étape 1 - Début</label>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Étape 1 - Début"} /></label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -341,13 +334,13 @@ export default function PhotoBoothCustomizer({
                     className="w-full border border-blue-200 bg-white rounded-lg pl-10 pr-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={config.stepTexts.step1}
                     onChange={(e) => handleTextChange('step1', e.target.value)}
-                    placeholder="Texte pour l'étape 1"
+                    placeholder={t("Texte pour l'étape 1")}
                   />
                 </div>
               </div>
               
               <div>
-                <label className="block mb-2 font-medium text-blue-700">Étape 2 - Cadrage</label>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Étape 2 - Cadrage"} /></label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -359,13 +352,13 @@ export default function PhotoBoothCustomizer({
                     className="w-full border border-blue-200 bg-white rounded-lg pl-10 pr-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={config.stepTexts.step2}
                     onChange={(e) => handleTextChange('step2', e.target.value)}
-                    placeholder="Texte pour l'étape 2"
+                    placeholder={t("Texte pour l'étape 2")}
                   />
                 </div>
               </div>
               
               <div>
-                <label className="block mb-2 font-medium text-blue-700">Étape 3 - Validation</label>
+                <label className="block mb-2 font-medium text-blue-700"><T text={"Étape 3 - Validation"} /></label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -377,7 +370,7 @@ export default function PhotoBoothCustomizer({
                     className="w-full border border-blue-200 bg-white rounded-lg pl-10 pr-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     value={config.stepTexts.step3}
                     onChange={(e) => handleTextChange('step3', e.target.value)}
-                    placeholder="Texte pour l'étape 3"
+                    placeholder={t("Texte pour l'étape 3")}
                   />
                 </div>
               </div>
@@ -398,16 +391,12 @@ export default function PhotoBoothCustomizer({
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Enregistrement...
-              </>
+                </svg><T text={"Enregistrement..."} /></>
             ) : (
               <>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293zM9 4a1 1 0 012 0v2H9V4z" />
-                </svg>
-                Enregistrer les modifications
-              </>
+                </svg><T text={"Enregistrer les modifications"} /></>
             )}
           </button>
         </div>
@@ -419,9 +408,7 @@ export default function PhotoBoothCustomizer({
               <h3 className="font-semibold flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-                Aperçu sur Mobile (Portrait)
-              </h3>
+                </svg><T text={"Aperçu sur Mobile (Portrait)"} /></h3>
             </div>
             <div className="p-6 flex justify-center bg-gray-100">
               <PreviewMockup config={config} ratioClass="aspect-[9/16]" widthClass="w-[240px]" />
@@ -433,9 +420,7 @@ export default function PhotoBoothCustomizer({
               <h3 className="font-semibold flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                Aperçu sur Tablette (Paysage)
-              </h3>
+                </svg><T text={"Aperçu sur Tablette (Paysage)"} /></h3>
             </div>
             <div className="p-6 flex justify-center bg-gray-100">
               <PreviewMockup config={config} ratioClass="aspect-[16/9]" widthClass="w-full" />
@@ -452,8 +437,8 @@ export default function PhotoBoothCustomizer({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">Design enregistré</h3>
-          <p className="text-gray-600 mb-6">Les modifications du design ont été sauvegardées avec succès.</p>
+          <h3 className="text-2xl font-bold text-gray-800 mb-2"><T text={"Design enregistré"} /></h3>
+          <p className="text-gray-600 mb-6"><T text={"Les modifications du design ont été sauvegardées avec succès."} /></p>
           <button
             onClick={() => setShowModal(false)}
             className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold shadow hover:from-blue-700 hover:to-purple-700"
@@ -469,9 +454,7 @@ export default function PhotoBoothCustomizer({
           <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            Galerie d&apos;arrière-plans
-          </h3>
+            </svg><T text={"Galerie d'arrière-plans"} /></h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
             {PREDEFINED_BACKGROUNDS.map((bg) => (
               <div
@@ -503,9 +486,7 @@ export default function PhotoBoothCustomizer({
             <button
               onClick={() => setShowBgPicker(false)}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded font-medium hover:bg-gray-300"
-            >
-              Annuler
-            </button>
+            ><T text={"Annuler"} /></button>
           </div>
         </div>
       </Modal>
@@ -523,7 +504,7 @@ function PreviewMockup({
   widthClass: string;
 }) {
   return (
-    <div className={`relative ${widthClass} ${ratioClass} overflow-hidden rounded-xl shadow-lg border-8 border-gray-800`}>
+    <div className={`mockup-preview relative ${widthClass} ${ratioClass} overflow-hidden rounded-xl shadow-lg border-8 border-gray-800`}>
       <div
         className="absolute inset-0 flex flex-col items-center justify-between p-6"
         style={{
@@ -544,9 +525,7 @@ function PreviewMockup({
           <button
             className="px-6 py-3 rounded-lg text-white font-semibold text-sm shadow-lg"
             style={{ backgroundColor: config.buttonColor }}
-          >
-            Prendre une Photo
-          </button>
+          ><T text={"Prendre une Photo"} /></button>
           
           <p className="text-xs text-white bg-black bg-opacity-50 px-3 py-1 rounded-lg inline-block">
             {config.stepTexts.step3}

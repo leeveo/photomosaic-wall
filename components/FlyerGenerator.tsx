@@ -1,5 +1,7 @@
 'use client'
 
+import { T, useLanguage } from '@/components/LanguageProvider'
+
 import { useEffect, useState, useRef } from 'react'
 import { toPng } from 'html-to-image'
 import { supabase } from '@/lib/supabase'
@@ -69,6 +71,7 @@ export default function FlyerGenerator({
   hideProjectSelect = false,
   onDataChange 
 }: FlyerGeneratorProps) {
+  const { t } = useLanguage()
   const { Canvas } = useQRCode()
   const [projects, setProjects] = useState<Project[]>([])
   const [chosenSlug, setSelectedSlug] = useState<string>(initialSlug || '')
@@ -254,8 +257,8 @@ export default function FlyerGenerator({
     <div className="space-y-8 max-w-6xl">
       {!hideProjectSelect && (
         <div className="p-6 bg-gradient-to-br from-blue-500 via-purple-500 to-blue-500 rounded-lg shadow text-white mb-2">
-          <h2 className="text-3xl font-bold mb-2">🖨️ Générer un flyer avec QR Code</h2>
-          <p className="text-white text-opacity-80">Créez un flyer personnalisé pour inviter à votre mosaïque photo.</p>
+          <h2 className="text-3xl font-bold mb-2"><T text={"🖨️ Générer un flyer avec QR Code"} /></h2>
+          <p className="text-white text-opacity-80"><T text={"Créez un flyer personnalisé pour inviter à votre mosaïque photo."} /></p>
         </div>
       )}
 
@@ -268,9 +271,7 @@ export default function FlyerGenerator({
               <h3 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                Sélection du projet
-              </h3>
+                </svg><T text={"Sélection du projet"} /></h3>
               
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-500">
@@ -284,7 +285,7 @@ export default function FlyerGenerator({
                   onChange={(e) => setSelectedSlug(e.target.value)}
                   disabled={!!forceSlug}
                 >
-                  <option value="">-- Sélectionnez un projet --</option>
+                  <option value=""><T text={"-- Sélectionnez un projet --"} /></option>
                   {projects.map((p) => (
                     <option key={p.slug} value={p.slug}>
                       {p.title}
@@ -300,14 +301,12 @@ export default function FlyerGenerator({
             <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Textes du flyer
-            </h3>
+              </svg><T text={"Textes du flyer"} /></h3>
             
             <div className="space-y-6">
               {/* Title section with styling and position */}
               <div className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
-                <h4 className="text-sm font-medium text-blue-700 mb-3">Titre principal</h4>
+                <h4 className="text-sm font-medium text-blue-700 mb-3"><T text={"Titre principal"} /></h4>
                 <div className="space-y-4">
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500">
@@ -320,14 +319,14 @@ export default function FlyerGenerator({
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className="w-full border border-blue-200 bg-white rounded-lg pl-10 pr-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="Titre du flyer"
+                      placeholder={t("Titre du flyer")}
                     />
                   </div>
                   
                   <div className="grid grid-cols-3 gap-3">
                     {/* Color picker */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Couleur</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Couleur"} /></label>
                       <div className="flex items-center space-x-2">
                         <input
                           type="color"
@@ -346,7 +345,7 @@ export default function FlyerGenerator({
                     
                     {/* Font size */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Taille (px)</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Taille (px)"} /></label>
                       <input
                         type="number"
                         value={titleSize}
@@ -359,7 +358,7 @@ export default function FlyerGenerator({
                     
                     {/* Font family */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Police</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Police"} /></label>
                       <select
                         value={titleFont}
                         onChange={(e) => setTitleFont(e.target.value)}
@@ -376,7 +375,7 @@ export default function FlyerGenerator({
                   
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
-                    <label className="block text-xs text-gray-500 mb-1">Position</label>
+                    <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
                     <div className="grid grid-cols-3 gap-1">
                       {POSITION_OPTIONS.map(pos => (
                         <button
@@ -398,13 +397,13 @@ export default function FlyerGenerator({
                   
                   {/* Preview */}
                   <div className="mt-2 bg-gray-100 p-2 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Aperçu:</p>
+                    <p className="text-xs text-gray-500 mb-1"><T text={"Aperçu:"} /></p>
                     <p style={{
                       color: titleColor,
                       fontSize: `${titleSize}px`,
                       fontFamily: titleFont
                     }}>
-                      {title || "Titre du flyer"}
+                      {title || t("Titre du flyer")}
                     </p>
                   </div>
                 </div>
@@ -412,7 +411,7 @@ export default function FlyerGenerator({
               
               {/* Subtitle section with styling and enhanced position */}
               <div className="p-4 bg-white rounded-lg shadow-sm border border-blue-100">
-                <h4 className="text-sm font-medium text-blue-700 mb-3">Sous-titre</h4>
+                <h4 className="text-sm font-medium text-blue-700 mb-3"><T text={"Sous-titre"} /></h4>
                 <div className="space-y-4">
                   <div className="relative">
                     <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-blue-500">
@@ -425,14 +424,14 @@ export default function FlyerGenerator({
                       value={subtitle}
                       onChange={(e) => setSubtitle(e.target.value)}
                       className="w-full border border-blue-200 bg-white rounded-lg pl-10 pr-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="Instructions pour le QR code"
+                      placeholder={t("Instructions pour le QR code")}
                     />
                   </div>
                   
                   <div className="grid grid-cols-3 gap-3">
                     {/* Color picker */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Couleur</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Couleur"} /></label>
                       <div className="flex items-center space-x-2">
                         <input
                           type="color"
@@ -451,7 +450,7 @@ export default function FlyerGenerator({
                     
                     {/* Font size */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Taille (px)</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Taille (px)"} /></label>
                       <input
                         type="number"
                         value={subtitleSize}
@@ -464,7 +463,7 @@ export default function FlyerGenerator({
                     
                     {/* Font family */}
                     <div>
-                      <label className="block text-xs text-gray-500 mb-1">Police</label>
+                      <label className="block text-xs text-gray-500 mb-1"><T text={"Police"} /></label>
                       <select
                         value={subtitleFont}
                         onChange={(e) => setSubtitleFont(e.target.value)}
@@ -481,7 +480,7 @@ export default function FlyerGenerator({
                   
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
-                    <label className="block text-xs text-gray-500 mb-1">Position</label>
+                    <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
                     <div className="grid grid-cols-3 gap-1">
                       {POSITION_OPTIONS.map(pos => (
                         <button
@@ -503,7 +502,7 @@ export default function FlyerGenerator({
                   
                   {/* Preview */}
                   <div className="mt-2 bg-gray-100 p-2 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">Aperçu:</p>
+                    <p className="text-xs text-gray-500 mb-1"><T text={"Aperçu:"} /></p>
                     <p style={{
                       color: subtitleColor,
                       fontSize: `${subtitleSize}px`,
@@ -527,15 +526,13 @@ export default function FlyerGenerator({
                       onChange={(e) => setAdaptQrToBackground(e.target.checked)}
                       className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
                     />
-                    <label htmlFor="adaptQrToBackground" className="ml-2 text-sm text-gray-700">
-                      Adapter automatiquement les couleurs du QR code au fond
-                    </label>
+                    <label htmlFor="adaptQrToBackground" className="ml-2 text-sm text-gray-700"><T text={"Adapter automatiquement les couleurs du QR code au fond"} /></label>
                   </div>
                   
                   {!adaptQrToBackground && (
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Couleur du code</label>
+                        <label className="block text-xs text-gray-500 mb-1"><T text={"Couleur du code"} /></label>
                         <div className="flex items-center space-x-2">
                           <input
                             type="color"
@@ -553,7 +550,7 @@ export default function FlyerGenerator({
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-500 mb-1">Couleur du fond</label>
+                        <label className="block text-xs text-gray-500 mb-1"><T text={"Couleur du fond"} /></label>
                         <div className="flex items-center space-x-2">
                           <input
                             type="color"
@@ -574,7 +571,7 @@ export default function FlyerGenerator({
                   
                   {/* Enhanced Position selector - 9-point grid */}
                   <div className="mt-4">
-                    <label className="block text-xs text-gray-500 mb-1">Position</label>
+                    <label className="block text-xs text-gray-500 mb-1"><T text={"Position"} /></label>
                     <div className="grid grid-cols-3 gap-1">
                       {POSITION_OPTIONS.map(pos => (
                         <button
@@ -623,13 +620,11 @@ export default function FlyerGenerator({
             <h3 className="text-lg font-semibold text-purple-800 mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-              </svg>
-              Design du flyer
-            </h3>
+              </svg><T text={"Design du flyer"} /></h3>
             
             <div className="space-y-5">
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Couleur arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700"><T text={"Couleur arrière-plan"} /></label>
                 <div className="flex items-center space-x-3">
                   <input
                     type="color"
@@ -652,11 +647,11 @@ export default function FlyerGenerator({
                     />
                   </div>
                 </div>
-                <p className="mt-1 text-xs text-purple-600">Vous pouvez entrer un code hexadécimal ou un nom de couleur CSS</p>
+                <p className="mt-1 text-xs text-purple-600"><T text={"Vous pouvez entrer un code hexadécimal ou un nom de couleur CSS"} /></p>
               </div>
               
               <div>
-                <label className="block mb-2 font-medium text-purple-700">Image arrière-plan</label>
+                <label className="block mb-2 font-medium text-purple-700"><T text={"Image arrière-plan"} /></label>
                 <div className="bg-white p-4 rounded-lg border border-purple-100 mb-3">
                   <div className="flex flex-wrap gap-3 items-center mb-3">
                     <label
@@ -665,9 +660,7 @@ export default function FlyerGenerator({
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Choisir une image
-                      <input
+                      </svg><T text={"Choisir une image"} /><input
                         id="flyer-background-upload"
                         type="file"
                         accept="image/*"
@@ -698,19 +691,19 @@ export default function FlyerGenerator({
                   </div>
                   
                   <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <p><span className="font-medium">Recommandations :</span></p>
+                    <p><span className="font-medium"><T text={"Recommandations :"} /></span></p>
                     <ul className="mt-1 ml-4 list-disc text-xs space-y-1 text-gray-600">
-                      <li>Utilisez une image de haute qualité (min 1500px de large)</li>
-                      <li>Format recommandé : JPG ou PNG</li>
-                      <li>Images foncées ou avec motifs légers pour un meilleur contraste avec le texte</li>
-                      <li>Évitez les images trop chargées ou avec trop de détails</li>
+                      <li><T text={"Utilisez une image de haute qualité (min 1500px de large)"} /></li>
+                      <li><T text={"Format recommandé : JPG ou PNG"} /></li>
+                      <li><T text={"Images foncées ou avec motifs légers pour un meilleur contraste avec le texte"} /></li>
+                      <li><T text={"Évitez les images trop chargées ou avec trop de détails"} /></li>
                     </ul>
                   </div>
                 </div>
                 
                 {uploadedBackground && (
                   <div className="bg-white p-4 rounded-lg border border-purple-100">
-                    <label className="block text-sm text-gray-700 mb-1">Effet de flou</label>
+                    <label className="block text-sm text-gray-700 mb-1"><T text={"Effet de flou"} /></label>
                     <div className="flex items-center gap-4">
                       <input 
                         type="range" 
@@ -722,7 +715,7 @@ export default function FlyerGenerator({
                       />
                       <span className="text-sm text-gray-500 w-8 text-center">{backgroundBlur}</span>
                     </div>
-                    <p className="text-xs text-purple-600 mt-1">Ajustez le flou pour améliorer la lisibilité du texte</p>
+                    <p className="text-xs text-purple-600 mt-1"><T text={"Ajustez le flou pour améliorer la lisibilité du texte"} /></p>
                   </div>
                 )}
               </div>
@@ -744,16 +737,12 @@ export default function FlyerGenerator({
                 <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Génération en cours...
-              </>
+                </svg><T text={"Génération en cours..."} /></>
             ) : (
               <>
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Télécharger le flyer
-              </>
+                </svg><T text={"Télécharger le flyer"} /></>
             )}
           </button>
         </div>
@@ -765,9 +754,7 @@ export default function FlyerGenerator({
               <h3 className="font-semibold flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                </svg>
-                Aperçu du flyer (Format A5)
-              </h3>
+                </svg><T text={"Aperçu du flyer (Format A5)"} /></h3>
             </div>
             <div className="p-6 flex justify-center bg-gray-100">
               <div 
@@ -862,25 +849,17 @@ export default function FlyerGenerator({
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
-              <h5 className="font-medium text-amber-800">Comment utiliser ce flyer</h5>
+              <h5 className="font-medium text-amber-800"><T text={"Comment utiliser ce flyer"} /></h5>
             </div>
             <ul className="space-y-2 text-sm text-amber-800 ml-9">
               <li className="flex items-center">
-                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                Téléchargez le flyer généré en format A5 (14.8 × 21 cm)
-              </li>
+                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Téléchargez le flyer généré en format A5 (14.8 × 21 cm)"} /></li>
               <li className="flex items-center">
-                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                Imprimez sans redimensionnement (échelle 100%) sur papier A5
-              </li>
+                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Imprimez sans redimensionnement (échelle 100%) sur papier A5"} /></li>
               <li className="flex items-center">
-                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                Les participants pourront scanner le QR code avec leur téléphone
-              </li>
+                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Les participants pourront scanner le QR code avec leur téléphone"} /></li>
               <li className="flex items-center">
-                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span>
-                Pour impression sur A4, sélectionnez &quot;Ajuster à la page&quot;
-              </li>
+                <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full mr-2"></span><T text={"Pour impression sur A4, sélectionnez \"Ajuster à la page\""} /></li>
             </ul>
           </div>
         </div>
